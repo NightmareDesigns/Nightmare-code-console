@@ -19,8 +19,10 @@
     .then((cfg) => {
       if (badge) {
         if (cfg.apiConfigured) {
-          badge.textContent = cfg.model || 'LIVE';
+          const label = cfg.isLocalEndpoint ? 'LOCAL' : (cfg.model || 'LIVE');
+          badge.textContent = label;
           badge.classList.add('live');
+          if (cfg.isLocalEndpoint) badge.title = `Local AI: ${cfg.apiUrl}`;
         } else {
           badge.textContent = 'MOCK';
           badge.classList.remove('live');

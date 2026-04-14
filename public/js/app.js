@@ -37,6 +37,11 @@
   const matrixSpeedRange = document.getElementById('matrixSpeedRange');
   const aiApiKeyInput  = document.getElementById('aiApiKeyInput');
   const saveApiKeyBtn  = document.getElementById('saveApiKeyBtn');
+  const localAiToggle  = document.getElementById('localAiToggle');
+  const localAiSettings = document.getElementById('localAiSettings');
+  const localAiUrlInput = document.getElementById('localAiUrlInput');
+  const localAiModelInput = document.getElementById('localAiModelInput');
+  const saveLocalAiBtn = document.getElementById('saveLocalAiBtn');
   const clearTermBtn   = document.getElementById('clearTermBtn');
   const searchBtn      = document.getElementById('searchBtn');
   const replaceBtn     = document.getElementById('replaceBtn');
@@ -371,6 +376,38 @@
       }
     });
   }
+
+  // ── Local AI settings ──────────────────────────────────────
+  function loadLocalAiSettings() {
+    const enabled = localStorage.getItem('nm-local-ai') === 'true';
+    const url = localStorage.getItem('nm-local-ai-url') || 'http://localhost:11434/v1/chat/completions';
+    const model = localStorage.getItem('nm-local-ai-model') || 'codellama:7b';
+
+    if (localAiToggle) localAiToggle.checked = enabled;
+    if (localAiUrlInput) localAiUrlInput.value = url;
+    if (localAiModelInput) localAiModelInput.value = model;
+    if (localAiSettings) localAiSettings.style.display = enabled ? 'block' : 'none';
+  }
+
+  if (localAiToggle) {
+    localAiToggle.addEventListener('change', () => {
+      const enabled = localAiToggle.checked;
+      localStorage.setItem('nm-local-ai', enabled ? 'true' : 'false');
+      if (localAiSettings) localAiSettings.style.display = enabled ? 'block' : 'none';
+    });
+  }
+
+  if (saveLocalAiBtn) {
+    saveLocalAiBtn.addEventListener('click', () => {
+      const url = localAiUrlInput ? localAiUrlInput.value.trim() : '';
+      const model = localAiModelInput ? localAiModelInput.value.trim() : '';
+      if (url) localStorage.setItem('nm-local-ai-url', url);
+      if (model) localStorage.setItem('nm-local-ai-model', model);
+      setStatus('Local AI settings saved to browser. Update .env on the server and restart to apply.');
+    });
+  }
+
+  loadLocalAiSettings();
 
   // ── New Tab / File ─────────────────────────────────────────
   if (newTabBtn) {
