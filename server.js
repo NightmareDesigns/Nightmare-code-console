@@ -53,6 +53,13 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Serve vendored frontend dependencies from node_modules
+app.use('/vendor/monaco', express.static(path.join(__dirname, 'node_modules/monaco-editor/min')));
+app.use('/vendor/marked', express.static(path.join(__dirname, 'node_modules/marked')));
+app.use('/vendor/hljs', express.static(path.join(__dirname, 'node_modules/highlight.js')));
+app.use('/vendor/xterm', express.static(path.join(__dirname, 'node_modules/xterm')));
+app.use('/vendor/xterm-fit', express.static(path.join(__dirname, 'node_modules/xterm-addon-fit')));
+
 // Rate limiter for file system and AI routes (prevent abuse)
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -117,8 +124,8 @@ app.post('/api/file', apiLimiter, (req, res) => {
   }
 });
 
-// Health check
-app.get('/api/health', (req, res) => {
+// Health check (light rate limit to prevent abuse)
+app.get('/api/health', apiLimiter, (req, res) => {
   res.json({ status: 'ok', version: '1.0.0', name: 'Nightmare Code Console' });
 });
 

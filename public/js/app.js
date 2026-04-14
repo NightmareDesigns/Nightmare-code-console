@@ -428,6 +428,7 @@
     items.forEach((item) => {
       const el = document.createElement('div');
       el.className = 'file-tree-item' + (item.type === 'directory' ? ' file-tree-folder' : '');
+      el.dataset.path = item.path;
       el.innerHTML = `
         <span class="item-icon">${item.type === 'directory' ? '📁' : getFileIcon(item.name)}</span>
         <span class="item-name">${escHtml(item.name)}</span>
@@ -455,9 +456,9 @@
       if (window.NightmareEditor) {
         window.NightmareEditor.openFile(path, name, data.content || '', lang);
       }
-      // Highlight active item in tree
+      // Highlight active item in tree using data-path attribute
       document.querySelectorAll('.file-tree-item').forEach((el) => el.classList.remove('active'));
-      const activeItem = document.querySelector(`.file-tree-item[title="${CSS.escape(path)}"]`);
+      const activeItem = document.querySelector(`.file-tree-item[data-path="${CSS.escape(path)}"]`);
       if (activeItem) activeItem.classList.add('active');
     } catch (err) {
       logToConsole(`Failed to open file: ${err.message}`, 'error');

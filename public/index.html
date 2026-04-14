@@ -6,27 +6,20 @@
   <title>Nightmare Code Console</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩸</text></svg>" />
 
-  <!-- Monaco Editor -->
-  <link rel="stylesheet" crossorigin="anonymous"
-        href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.min.css" />
+  <!-- Monaco Editor (served locally from node_modules) -->
+  <link rel="stylesheet" href="/vendor/monaco/vs/editor/editor.main.css" />
 
-  <!-- Marked.js for markdown rendering in AI chat -->
-  <script crossorigin="anonymous"
-          src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+  <!-- Marked.js for markdown rendering in AI chat (served locally) -->
+  <script src="/vendor/marked/marked.min.js"></script>
 
-  <!-- highlight.js for code highlighting in AI responses -->
-  <link rel="stylesheet" crossorigin="anonymous"
-        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
-  <script crossorigin="anonymous"
-          src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <!-- highlight.js for code highlighting in AI responses (served locally) -->
+  <link rel="stylesheet" href="/vendor/hljs/styles/github-dark.min.css" />
+  <script src="/vendor/hljs/highlight.min.js"></script>
 
-  <!-- xterm.js for terminal -->
-  <link rel="stylesheet" crossorigin="anonymous"
-        href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
-  <script crossorigin="anonymous"
-          src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
-  <script crossorigin="anonymous"
-          src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+  <!-- xterm.js for terminal (served locally) -->
+  <link rel="stylesheet" href="/vendor/xterm/css/xterm.css" />
+  <script src="/vendor/xterm/lib/xterm.js"></script>
+  <script src="/vendor/xterm-fit/lib/xterm-addon-fit.js"></script>
 
   <link rel="stylesheet" href="/css/main.css" />
   <link rel="stylesheet" href="/css/animations.css" />
@@ -333,19 +326,27 @@
     </div>
   </div>
 
-  <!-- Monaco Editor loader -->
+  <!-- Monaco Editor loader (served locally) -->
   <script>
     // Configure Monaco AMD loader path before loading the editor
     window.require = {
-      paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }
+      paths: { vs: '/vendor/monaco/vs' }
     };
   </script>
-  <script crossorigin="anonymous"
-          src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.js"></script>
-  <script crossorigin="anonymous"
-          src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.nls.js"></script>
-  <script crossorigin="anonymous"
-          src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.js"></script>
+  <script src="/vendor/monaco/vs/loader.js"></script>
+  <script src="/vendor/monaco/vs/editor/editor.main.nls.js"></script>
+  <script src="/vendor/monaco/vs/editor/editor.main.js"></script>
+  <script>
+    // Configure Monaco web workers to use a simple fallback blob,
+    // preventing 404s for worker scripts not included in the /min/ build.
+    window.MonacoEnvironment = {
+      getWorkerUrl: function () {
+        return URL.createObjectURL(
+          new Blob(['self.onmessage = function() {}'], { type: 'text/javascript' })
+        );
+      }
+    };
+  </script>
 
   <!-- App scripts -->
   <script src="/js/matrix.js"></script>

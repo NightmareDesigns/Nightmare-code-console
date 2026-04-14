@@ -240,17 +240,3 @@
   font-size: 10px;
 }
 
-/* ── Tooltip ──────────────────────────────────────────────── */
-[title]:hover::after {
-  content: attr(title);
-  position: absolute;
-  background: var(--bg-active);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 3px;
-  white-space: nowrap;
-  z-index: 1000;
-  pointer-events: none;
-}
