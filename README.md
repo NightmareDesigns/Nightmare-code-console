@@ -163,10 +163,7 @@ npm install capacitor-nodejs
 # 3. Build the static web assets into dist/
 npm run build
 
-# 4. Initialize Capacitor (first time only)
-npx cap init "Nightmare Code Console" "com.nightmaredesigns.codeconsole" --web-dir dist
-
-# 5. Add the Android platform (creates android/ folder)
+# 4. Add the Android platform (creates android/ folder)
 npx cap add android
 
 # 6. Sync web assets to Android

@@ -403,7 +403,7 @@
       const model = localAiModelInput ? localAiModelInput.value.trim() : '';
       if (url) localStorage.setItem('nm-local-ai-url', url);
       if (model) localStorage.setItem('nm-local-ai-model', model);
-      setStatus('Local AI settings saved — restart the server with updated .env to apply');
+      setStatus('Local AI settings saved to browser. Update .env on the server and restart to apply.');
     });
   }
 

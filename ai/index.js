@@ -104,8 +104,8 @@ router.post('/chat', async (req, res) => {
     if (isLocalEndpoint && (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND')) {
       return res.status(503).json({
         error: `Local AI server not reachable at ${AI_API_URL}. ` +
-          'Make sure Ollama (or LM Studio) is running. ' +
-          'Run: ollama serve && ollama pull codellama:7b',
+          'Make sure your local AI server (Ollama, LM Studio, or llama.cpp) is running. ' +
+          'For Ollama: ollama serve && ollama pull codellama:7b',
       });
     }
     res.status(500).json({ error: 'Failed to reach AI service' });

@@ -25,8 +25,11 @@ try {
   NodeJS.whenReady().then(() => {
     NodeJS.send({ eventName: 'nodeReady', args: [{ port: 3000 }] });
   });
-} catch {
-  // Not running inside Capacitor (e.g., running in desktop mode) — ignore
+} catch (err) {
+  // Not running inside Capacitor (e.g., running in desktop mode) — expected
+  if (err.code !== 'MODULE_NOT_FOUND') {
+    console.warn('[server/main.js] capacitor-nodejs bridge error:', err.message);
+  }
 }
 
 // Start the Express server on port 3000

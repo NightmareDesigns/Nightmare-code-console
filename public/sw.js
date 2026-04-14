@@ -44,9 +44,12 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME).then(async (cache) => {
       // Cache each URL individually so one failure doesn't block others
       const results = await Promise.allSettled(
-        PRECACHE_URLS.map((url) => cache.add(url).catch((err) => {
-          console.warn(`[SW] Failed to cache ${url}:`, err.message);
-        }))
+        PRECACHE_URLS.map((url) =>
+          cache.add(url).catch((err) => {
+            console.warn(`[SW] Failed to cache ${url}:`, err.message);
+            return null; // sentinel so allSettled tracks the outcome
+          })
+        )
       );
       return results;
     }).then(() => self.skipWaiting())

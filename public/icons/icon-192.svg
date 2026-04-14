@@ -1,5 +1,5 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'>
-  <rect width='192' height='192' rx='14.399999999999999' fill='#0a0a0f'/>
-  <text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='115.19999999999999' font-family='serif'>🩸</text>
-  <text x='50%' y='88%' dominant-baseline='middle' text-anchor='middle' font-size='23.04' font-family='monospace' fill='#cc0000'>NCC</text>
+  <rect width='192' height='192' rx='14' fill='#0a0a0f'/>
+  <text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='115' font-family='serif'>🩸</text>
+  <text x='50%' y='88%' dominant-baseline='middle' text-anchor='middle' font-size='23' font-family='monospace' fill='#cc0000'>NCC</text>
 </svg>
