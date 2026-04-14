@@ -1,0 +1,242 @@
+/* ============================================================
+   Nightmare Code Console — Animations Stylesheet
+   Matrix Rain + Blood Drip + UI Animations
+   ============================================================ */
+
+/* ── Blood Drip Animation ─────────────────────────────────── */
+.blood-drop {
+  position: absolute;
+  top: 0;
+  width: 3px;
+  border-radius: 50% 50% 40% 40%;
+  background: linear-gradient(180deg, #8b0000 0%, #cc0000 40%, #ff2222 100%);
+  animation: bloodDrip var(--drip-duration, 3s) ease-in var(--drip-delay, 0s) forwards;
+  box-shadow: 0 0 4px rgba(200, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+@keyframes bloodDrip {
+  0% {
+    height: 0;
+    opacity: 0.9;
+    transform: scaleX(1);
+  }
+  30% {
+    opacity: 1;
+  }
+  70% {
+    height: var(--drip-length, 80px);
+    transform: scaleX(1);
+  }
+  85% {
+    height: var(--drip-length, 80px);
+    transform: scaleX(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    height: var(--drip-length, 80px);
+    transform: scaleX(0.8);
+    opacity: 0;
+  }
+}
+
+/* Blood pool at bottom of drip */
+.blood-pool {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #cc0000 0%, #8b0000 60%, transparent 100%);
+  animation: poolExpand 0.5s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes poolExpand {
+  from { transform: scale(0); opacity: 1; }
+  to   { transform: scale(1); opacity: 0.7; }
+}
+
+/* Blood splatter on borders of active elements */
+.title-bar::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%, #8b0000 20%, #cc0000 50%, #8b0000 80%, transparent 100%);
+  pointer-events: none;
+}
+
+/* ── Matrix Text Glow ─────────────────────────────────────── */
+.matrix-text {
+  color: var(--accent-green);
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.8), 0 0 16px rgba(0, 255, 65, 0.4);
+}
+
+/* ── Logo flicker animation ───────────────────────────────── */
+.logo-icon {
+  animation: iconFlicker 6s ease-in-out infinite;
+}
+
+@keyframes iconFlicker {
+  0%, 90%, 100% { filter: drop-shadow(0 0 6px var(--accent-red)); opacity: 1; }
+  92%            { opacity: 0.6; filter: drop-shadow(0 0 2px var(--accent-red)); }
+  95%            { opacity: 1; filter: drop-shadow(0 0 10px var(--accent-red)); }
+  97%            { opacity: 0.7; filter: drop-shadow(0 0 3px var(--accent-red)); }
+}
+
+/* ── Status bar pulse ─────────────────────────────────────── */
+.status-bar {
+  background: linear-gradient(90deg, #5a0000, #8b0000, #5a0000);
+  background-size: 200% 100%;
+  animation: statusPulse 8s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+/* ── Tab active underline glow ────────────────────────────── */
+.tab.active {
+  box-shadow: inset 0 -2px 0 var(--accent-red), 0 0 8px rgba(204, 0, 0, 0.1);
+}
+
+/* ── Sidebar border glow ──────────────────────────────────── */
+.activity-btn.active {
+  box-shadow: inset 2px 0 0 var(--accent-red);
+}
+
+/* ── AI bubble entrance ───────────────────────────────────── */
+.ai-message {
+  animation: msgSlideIn 0.2s ease-out;
+}
+
+@keyframes msgSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Run button pulse ─────────────────────────────────────── */
+#runBtn:hover {
+  animation: runPulse 0.6s ease-in-out infinite;
+  color: var(--accent-green);
+}
+
+@keyframes runPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(0, 255, 65, 0); }
+  50%       { box-shadow: 0 0 8px rgba(0, 255, 65, 0.4); }
+}
+
+/* ── Panel transitions ────────────────────────────────────── */
+.sidebar-panel {
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Loading spinner ──────────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent-red);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Scan line effect (subtle) ────────────────────────────── */
+.app-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.05) 2px,
+    rgba(0, 0, 0, 0.05) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+  animation: scanlines 8s linear infinite;
+}
+
+@keyframes scanlines {
+  from { background-position: 0 0; }
+  to   { background-position: 0 32px; }
+}
+
+/* ── Plugin item highlight ────────────────────────────────── */
+.plugin-item.active::before {
+  content: '▶';
+  color: var(--accent-red);
+  font-size: 8px;
+  margin-right: 4px;
+}
+
+/* ── Cursor blink override for status ─────────────────────── */
+#statusMsg.updated {
+  animation: statusFlash 0.5s ease;
+}
+
+@keyframes statusFlash {
+  0%, 100% { color: rgba(255, 255, 255, 0.85); }
+  50%       { color: #fff; }
+}
+
+/* ── Blood drip on sidebar border ─────────────────────────── */
+.sidebar {
+  position: relative;
+}
+
+.sidebar::after {
+  content: '';
+  position: absolute;
+  top: 0; right: -1px;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(180deg,
+    #8b0000 0%, #cc0000 30%, #8b0000 60%, transparent 100%);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ── AI panel border glow ─────────────────────────────────── */
+.ai-panel {
+  position: relative;
+}
+.ai-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -1px;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(180deg,
+    #8b0000 0%, #cc0000 50%, #8b0000 100%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ── Resize handle ────────────────────────────────────────── */
+.resize-handle {
+  background: var(--border);
+  cursor: row-resize;
+  height: 4px;
+  transition: background 0.15s;
+}
+.resize-handle:hover { background: var(--accent-red); }
+
+/* ── File tree item dot ───────────────────────────────────── */
+.file-tree-item.modified .item-name::after {
+  content: ' ●';
+  color: var(--accent-red);
+  font-size: 10px;
+}
+

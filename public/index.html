@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nightmare Code Console</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩸</text></svg>" />
+
+  <!-- Monaco Editor (served locally from node_modules) -->
+  <link rel="stylesheet" href="/vendor/monaco/vs/editor/editor.main.css" />
+
+  <!-- Marked.js for markdown rendering in AI chat (served locally) -->
+  <script src="/vendor/marked/marked.min.js"></script>
+
+  <!-- highlight.js for code highlighting in AI responses (served locally) -->
+  <link rel="stylesheet" href="/vendor/hljs/styles/github-dark.min.css" />
+  <script src="/vendor/hljs/highlight.min.js"></script>
+
+  <!-- xterm.js for terminal (served locally) -->
+  <link rel="stylesheet" href="/vendor/xterm/css/xterm.css" />
+  <script src="/vendor/xterm/lib/xterm.js"></script>
+  <script src="/vendor/xterm-fit/lib/xterm-addon-fit.js"></script>
+
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/animations.css" />
+</head>
+<body class="nightmare-theme">
+
+  <!-- Matrix Rain Canvas (background) -->
+  <canvas id="matrixCanvas" class="matrix-canvas"></canvas>
+
+  <!-- Blood Drip Layer -->
+  <div id="bloodLayer" class="blood-layer" aria-hidden="true"></div>
+
+  <!-- ===== APP SHELL ===== -->
+  <div id="app" class="app-shell">
+
+    <!-- ===== TITLE BAR ===== -->
+    <header class="title-bar" role="banner">
+      <div class="title-bar-left">
+        <button class="icon-btn sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar (Ctrl+B)" aria-label="Toggle sidebar">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="2" width="14" height="2"/>
+            <rect x="1" y="7" width="14" height="2"/>
+            <rect x="1" y="12" width="14" height="2"/>
+          </svg>
+        </button>
+        <div class="app-logo">
+          <span class="logo-icon">🩸</span>
+          <span class="logo-text">Nightmare Code Console</span>
+        </div>
+      </div>
+      <div class="title-bar-center">
+        <div class="breadcrumb" id="breadcrumb">
+          <span class="breadcrumb-file" id="breadcrumbFile">untitled</span>
+          <span class="breadcrumb-lang" id="breadcrumbLang">plaintext</span>
+        </div>
+      </div>
+      <div class="title-bar-right">
+        <button class="icon-btn" id="runBtn" title="Run Code (F5)" aria-label="Run code">▶ Run</button>
+        <button class="icon-btn" id="aiToggleBtn" title="Toggle AI Panel (Ctrl+Shift+A)" aria-label="Toggle AI assistant">🤖 AI</button>
+        <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">⚙</button>
+      </div>
+    </header>
+
+    <!-- ===== MAIN LAYOUT ===== -->
+    <div class="main-layout">
+
+      <!-- ===== ACTIVITY BAR ===== -->
+      <nav class="activity-bar" role="navigation" aria-label="Activity bar">
+        <button class="activity-btn active" data-panel="explorer" title="File Explorer (Ctrl+Shift+E)" aria-label="File Explorer">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5z"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="search" title="Search (Ctrl+Shift+F)" aria-label="Search">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="plugins" title="Plugins / Languages" aria-label="Plugins">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M9.5 2A1.5 1.5 0 0 1 11 3.5v1A1.5 1.5 0 0 1 9.5 6H9v1h2.5A1.5 1.5 0 0 1 13 8.5v1A1.5 1.5 0 0 1 11.5 11H11v1h.5A1.5 1.5 0 0 1 13 13.5v1A1.5 1.5 0 0 1 11.5 16h-7A1.5 1.5 0 0 1 3 14.5v-1A1.5 1.5 0 0 1 4.5 12H5v-1H4.5A1.5 1.5 0 0 1 3 9.5v-1A1.5 1.5 0 0 1 4.5 7H7V6h-.5A1.5 1.5 0 0 1 5 4.5v-1A1.5 1.5 0 0 1 6.5 2h3z"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="git" title="Source Control" aria-label="Source Control">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M11.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5zm-2.25.75a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.5 2.5 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25zM4.25 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5zM4.25 6a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5z"/>
+          </svg>
+        </button>
+        <div class="activity-spacer"></div>
+        <button class="activity-btn" data-panel="settings-panel" id="settingsActivityBtn" title="Settings" aria-label="Settings">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/>
+            <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.892 3.433-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.892-1.64-.901-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/>
+          </svg>
+        </button>
+      </nav>
+
+      <!-- ===== SIDEBAR ===== -->
+      <aside class="sidebar" id="sidebar" role="complementary" aria-label="Sidebar">
+        <!-- Explorer Panel -->
+        <div class="sidebar-panel active" id="panel-explorer">
+          <div class="panel-header">
+            <span>EXPLORER</span>
+            <div class="panel-actions">
+              <button class="icon-btn-sm" id="newFileBtn" title="New File" aria-label="New file">+📄</button>
+              <button class="icon-btn-sm" id="refreshExplorerBtn" title="Refresh" aria-label="Refresh explorer">↻</button>
+            </div>
+          </div>
+          <div class="file-tree" id="fileTree" role="tree" aria-label="File tree"></div>
+          <div class="panel-footer">
+            <button class="btn-full" id="openFolderBtn" aria-label="Open folder">📁 Open Folder</button>
+          </div>
+        </div>
+
+        <!-- Search Panel -->
+        <div class="sidebar-panel" id="panel-search">
+          <div class="panel-header"><span>SEARCH</span></div>
+          <div class="search-form">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search in files..." aria-label="Search query" />
+            <input type="text" class="search-input" id="replaceInput" placeholder="Replace with..." aria-label="Replace text" />
+            <div class="search-actions">
+              <button class="btn-sm" id="searchBtn" aria-label="Search">Search</button>
+              <button class="btn-sm" id="replaceBtn" aria-label="Replace">Replace</button>
+            </div>
+          </div>
+          <div class="search-results" id="searchResults" aria-live="polite"></div>
+        </div>
+
+        <!-- Plugins Panel -->
+        <div class="sidebar-panel" id="panel-plugins">
+          <div class="panel-header"><span>LANGUAGE PLUGINS</span></div>
+          <div class="plugins-filter">
+            <input type="text" class="search-input" id="pluginSearch" placeholder="Filter languages..." aria-label="Filter plugins" />
+          </div>
+          <div class="plugins-list" id="pluginsList" role="list" aria-label="Available plugins"></div>
+        </div>
+
+        <!-- Git Panel -->
+        <div class="sidebar-panel" id="panel-git">
+          <div class="panel-header"><span>SOURCE CONTROL</span></div>
+          <div class="git-info" id="gitInfo">
+            <p class="git-hint">Git integration coming soon.<br/>Use the terminal panel for git commands.</p>
+          </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div class="sidebar-panel" id="panel-settings-panel">
+          <div class="panel-header"><span>SETTINGS</span></div>
+          <div class="settings-list">
+            <div class="setting-group">
+              <label class="setting-label">Editor Font Size</label>
+              <input type="range" class="setting-range" id="fontSizeRange" min="10" max="28" value="14" aria-label="Font size" />
+              <span class="setting-value" id="fontSizeValue">14px</span>
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">Tab Size</label>
+              <select class="setting-select" id="tabSizeSelect" aria-label="Tab size">
+                <option value="2">2 spaces</option>
+                <option value="4" selected>4 spaces</option>
+                <option value="8">8 spaces</option>
+              </select>
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">Word Wrap</label>
+              <select class="setting-select" id="wordWrapSelect" aria-label="Word wrap">
+                <option value="off">Off</option>
+                <option value="on" selected>On</option>
+                <option value="wordWrapColumn">Column</option>
+              </select>
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">Minimap</label>
+              <label class="toggle" aria-label="Minimap toggle">
+                <input type="checkbox" id="minimapToggle" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">Matrix Animation</label>
+              <label class="toggle" aria-label="Matrix animation toggle">
+                <input type="checkbox" id="matrixToggle" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">Blood Drip Effect</label>
+              <label class="toggle" aria-label="Blood drip toggle">
+                <input type="checkbox" id="bloodToggle" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">Matrix Speed</label>
+              <input type="range" class="setting-range" id="matrixSpeedRange" min="1" max="10" value="5" aria-label="Matrix animation speed" />
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">AI API Key</label>
+              <small class="setting-hint">⚠ Stored in browser localStorage only — use .env on the server for production.</small>
+              <input type="password" class="search-input" id="aiApiKeyInput" placeholder="sk-... (convenience only)" aria-label="AI API key" autocomplete="off" />
+              <button class="btn-sm" id="saveApiKeyBtn" aria-label="Save API key">Save Key</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ===== EDITOR AREA ===== -->
+      <div class="editor-area" id="editorArea">
+
+        <!-- Tab Bar -->
+        <div class="tab-bar" id="tabBar" role="tablist" aria-label="Open files">
+          <button class="tab active" data-id="0" role="tab" aria-selected="true" aria-controls="monacoEditor">
+            <span class="tab-icon">📄</span>
+            <span class="tab-name">untitled</span>
+            <span class="tab-close" title="Close">✕</span>
+          </button>
+          <button class="new-tab-btn" id="newTabBtn" title="New Tab" aria-label="New tab">＋</button>
+        </div>
+
+        <!-- Monaco Editor Container -->
+        <div class="editor-container" id="monacoEditor" role="main" aria-label="Code editor"></div>
+
+        <!-- Terminal Panel (resizable bottom) -->
+        <div class="terminal-panel" id="terminalPanel">
+          <div class="terminal-header">
+            <div class="terminal-tabs">
+              <button class="term-tab active" data-term="output" aria-label="Output terminal">OUTPUT</button>
+              <button class="term-tab" data-term="console" aria-label="Console">CONSOLE</button>
+              <button class="term-tab" data-term="problems" aria-label="Problems">PROBLEMS</button>
+            </div>
+            <div class="terminal-actions">
+              <button class="icon-btn-sm" id="clearTermBtn" title="Clear" aria-label="Clear terminal">🗑</button>
+              <button class="icon-btn-sm" id="termToggleBtn" title="Toggle Terminal (Ctrl+`)" aria-label="Toggle terminal">⌄</button>
+            </div>
+          </div>
+          <div class="terminal-body" id="terminalBody">
+            <div class="term-pane active" id="term-output">
+              <div id="xtermContainer" class="xterm-container" aria-label="Terminal output"></div>
+            </div>
+            <div class="term-pane" id="term-console">
+              <div class="console-output" id="consoleOutput" aria-live="polite"></div>
+            </div>
+            <div class="term-pane" id="term-problems">
+              <div class="problems-list" id="problemsList" aria-live="polite">
+                <p class="no-problems">✔ No problems detected</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== AI ASSISTANT PANEL ===== -->
+      <aside class="ai-panel" id="aiPanel" role="complementary" aria-label="AI Assistant">
+        <div class="ai-header">
+          <div class="ai-title">
+            <span class="ai-logo">🤖</span>
+            <span>NightmareAI</span>
+            <span class="ai-badge" id="aiBadge">MOCK</span>
+          </div>
+          <button class="icon-btn-sm" id="clearChatBtn" title="Clear chat" aria-label="Clear chat">🗑</button>
+        </div>
+        <div class="ai-messages" id="aiMessages" aria-live="polite" aria-label="Chat messages">
+          <div class="ai-message assistant">
+            <div class="ai-avatar">🩸</div>
+            <div class="ai-bubble">
+              <p>Welcome to <strong>Nightmare Code Console</strong>! I'm <strong>NightmareAI</strong>, your coding assistant.</p>
+              <p>I can help you write, debug, explain, and review code in any language. Ask me anything!</p>
+            </div>
+          </div>
+        </div>
+        <div class="ai-input-area">
+          <div class="ai-context-toggle">
+            <label class="toggle-sm" title="Include current editor code as context">
+              <input type="checkbox" id="aiContextToggle" checked aria-label="Include editor code context" />
+              <span>Include editor context</span>
+            </label>
+          </div>
+          <div class="ai-input-row">
+            <textarea
+              class="ai-input"
+              id="aiInput"
+              placeholder="Ask NightmareAI anything about your code..."
+              rows="2"
+              aria-label="AI chat input"
+            ></textarea>
+            <button class="ai-send-btn" id="aiSendBtn" title="Send (Ctrl+Enter)" aria-label="Send message">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- ===== STATUS BAR ===== -->
+    <footer class="status-bar" role="contentinfo" aria-label="Status bar">
+      <div class="status-left">
+        <span class="status-item" id="statusBranch">⎇ main</span>
+        <span class="status-item status-errors" id="statusErrors">✔ 0</span>
+      </div>
+      <div class="status-center">
+        <span class="status-item" id="statusMsg">Nightmare Code Console — Ready</span>
+      </div>
+      <div class="status-right">
+        <span class="status-item" id="statusLang" title="Language">plaintext</span>
+        <span class="status-item" id="statusPos">Ln 1, Col 1</span>
+        <span class="status-item" id="statusEncoding">UTF-8</span>
+        <span class="status-item" id="statusCRLF">LF</span>
+      </div>
+    </footer>
+
+  </div><!-- /app-shell -->
+
+  <!-- ===== RUN OUTPUT MODAL ===== -->
+  <div class="modal-overlay" id="runModal" role="dialog" aria-modal="true" aria-label="Run output" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <span>▶ Run Output</span>
+        <button class="icon-btn-sm" id="closeRunModal" aria-label="Close run output">✕</button>
+      </div>
+      <pre class="modal-body" id="runOutput" aria-live="polite"></pre>
+    </div>
+  </div>
+
+  <!-- Monaco Editor loader (served locally) -->
+  <script>
+    // Configure Monaco AMD loader path before loading the editor
+    window.require = {
+      paths: { vs: '/vendor/monaco/vs' }
+    };
+  </script>
+  <script src="/vendor/monaco/vs/loader.js"></script>
+  <script src="/vendor/monaco/vs/editor/editor.main.nls.js"></script>
+  <script src="/vendor/monaco/vs/editor/editor.main.js"></script>
+  <script>
+    // Configure Monaco web workers to use a simple fallback blob,
+    // preventing 404s for worker scripts not included in the /min/ build.
+    window.MonacoEnvironment = {
+      getWorkerUrl: function () {
+        return URL.createObjectURL(
+          new Blob(['self.onmessage = function() {}'], { type: 'text/javascript' })
+        );
+      }
+    };
+  </script>
+
+  <!-- App scripts -->
+  <script src="/js/matrix.js"></script>
+  <script src="/js/blood.js"></script>
+  <script src="/js/editor.js"></script>
+  <script src="/js/ai.js"></script>
+  <script src="/js/plugins.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
