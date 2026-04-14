@@ -6,3 +6,9 @@ dist/
 .DS_Store
 uploads/
 *.tmp
+
+# Android / Capacitor generated files
+android/
+.gradle/
+*.keystore
+!debug.keystore

@@ -8,6 +8,9 @@ const AI_API_KEY = process.env.AI_API_KEY || '';
 const AI_MODEL = process.env.AI_MODEL || 'gpt-3.5-turbo';
 const AI_MOCK_MODE = process.env.AI_MOCK_MODE === 'true' || !AI_API_KEY || AI_API_KEY === 'your_api_key_here';
 
+// Detect whether we are pointing at a local AI server (Ollama, LM Studio, etc.)
+const isLocalEndpoint = /localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0/.test(AI_API_URL);
+
 // System prompt that gives the AI context about the Nightmare Code Console
 const SYSTEM_PROMPT = `You are NightmareAI, an advanced coding assistant built into the Nightmare Code Console — 
 a dark-themed, horror-inspired AI-powered code editor. You help developers write, debug, review, and 
@@ -61,12 +64,15 @@ router.post('/chat', async (req, res) => {
 
   try {
     const fetch = require('node-fetch');
+    const headers = { 'Content-Type': 'application/json' };
+    // Only send Authorization header when a key is present
+    // (Ollama and LM Studio don't require one)
+    if (AI_API_KEY) {
+      headers['Authorization'] = `Bearer ${AI_API_KEY}`;
+    }
     const response = await fetch(AI_API_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${AI_API_KEY}`,
-      },
+      headers,
       body: JSON.stringify({
         model: AI_MODEL,
         messages: apiMessages,
@@ -94,6 +100,14 @@ router.post('/chat', async (req, res) => {
     });
   } catch (err) {
     console.error('AI fetch error:', err.message);
+    // Give a more helpful error when a local server is configured but unreachable
+    if (isLocalEndpoint && (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND')) {
+      return res.status(503).json({
+        error: `Local AI server not reachable at ${AI_API_URL}. ` +
+          'Make sure Ollama (or LM Studio) is running. ' +
+          'Run: ollama serve && ollama pull codellama:7b',
+      });
+    }
     res.status(500).json({ error: 'Failed to reach AI service' });
   }
 });
@@ -104,6 +118,8 @@ router.get('/config', (req, res) => {
     model: AI_MODEL,
     mockMode: AI_MOCK_MODE,
     apiConfigured: !AI_MOCK_MODE,
+    isLocalEndpoint,
+    apiUrl: AI_MOCK_MODE ? null : AI_API_URL,
   });
 });
 

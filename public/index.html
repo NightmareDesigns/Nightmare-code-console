@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nightmare Code Console</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩸</text></svg>" />
+  <!-- PWA: Web App Manifest (enables "Add to Home Screen" on Android) -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#8b0000" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="NightmareIDE" />
 
   <!-- Monaco Editor (served locally from node_modules) -->
   <link rel="stylesheet" href="/vendor/monaco/vs/editor/editor.main.css" />
@@ -201,6 +208,25 @@
               <input type="password" class="search-input" id="aiApiKeyInput" placeholder="sk-... (convenience only)" aria-label="AI API key" autocomplete="off" />
               <button class="btn-sm" id="saveApiKeyBtn" aria-label="Save API key">Save Key</button>
             </div>
+            <div class="setting-group">
+              <label class="setting-label">Local / Network AI</label>
+              <small class="setting-hint">Use a locally-running Ollama or LM Studio server instead of a cloud API.</small>
+              <label class="toggle" aria-label="Local AI toggle">
+                <input type="checkbox" id="localAiToggle" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-group local-ai-settings" id="localAiSettings" style="display:none">
+              <label class="setting-label">AI Server URL</label>
+              <input type="text" class="search-input" id="localAiUrlInput" placeholder="http://localhost:11434/v1/chat/completions" aria-label="Local AI server URL" autocomplete="off" />
+              <label class="setting-label" style="margin-top:8px">Model Name</label>
+              <input type="text" class="search-input" id="localAiModelInput" placeholder="codellama:7b" aria-label="Local AI model name" autocomplete="off" />
+              <button class="btn-sm" id="saveLocalAiBtn" aria-label="Save local AI settings" style="margin-top:8px">Save &amp; Apply</button>
+              <small class="setting-hint" style="margin-top:6px">
+                💡 <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" style="color:#cc6666">Install Ollama</a> then run:<br/>
+                <code>ollama pull codellama:7b</code>
+              </small>
+            </div>
           </div>
         </div>
       </aside>
@@ -355,5 +381,16 @@
   <script src="/js/ai.js"></script>
   <script src="/js/plugins.js"></script>
   <script src="/js/app.js"></script>
+
+  <!-- PWA: Service Worker registration (offline support) -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((reg) => console.log('[SW] Registered, scope:', reg.scope))
+          .catch((err) => console.warn('[SW] Registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>
