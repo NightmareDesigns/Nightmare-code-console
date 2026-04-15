@@ -64,6 +64,8 @@
   const defaultGeminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${defaultGeminiModel}:generateContent`;
   const defaultCopilotUrl = 'https://api.githubcopilot.com/chat/completions';
   const defaultCopilotModel = 'gpt-4o';
+  const defaultTabbyUrl = 'http://127.0.0.1:8080/v1/chat/completions';
+  const defaultTabbyModel = 'TabbyML/StarCoder2-15B';
 
   // ── Sidebar panel switcher ─────────────────────────────────
   function activateSidebarPanel(panelId) {
@@ -419,6 +421,17 @@
       aiApiUrlInput.placeholder = defaultCopilotUrl;
       if (providerHint) providerHint.textContent = 'Copilot needs the GitHub Copilot chat endpoint and an account token.';
       if (aiApiKeyInput) aiApiKeyInput.placeholder = 'Copilot token';
+      return;
+    }
+
+    if (provider === 'tabby') {
+      if (!hasModel) aiApiModelInput.value = defaultTabbyModel;
+      if (shouldReplaceUrl([defaultOpenAiUrl, defaultGeminiUrl, defaultCopilotUrl, defaultTabbyUrl])) {
+        aiApiUrlInput.value = defaultTabbyUrl;
+      }
+      aiApiUrlInput.placeholder = defaultTabbyUrl;
+      if (providerHint) providerHint.textContent = 'Tabby uses its OpenAI-compatible /v1/chat/completions endpoint (no key by default).';
+      if (aiApiKeyInput) aiApiKeyInput.placeholder = 'Tabby API key (optional)';
       return;
     }
 

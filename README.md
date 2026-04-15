@@ -166,6 +166,7 @@ Prefer not to edit `.env`? Open **Settings → AI** inside the app to paste your
 
 - **Gemini**: Select Gemini in Settings and provide your Gemini API key. The endpoint now auto-fills for the chosen model (defaults to `gemini-3.1-flash`). Quick picks: `gemini-3.1-pro`, `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-1.5-pro`, `gemini-1.5-flash-8b`, `gemini-1.5-flash-lite`, `gemini-1.0-pro`.
 - **GitHub Copilot**: Select Copilot, provide the Copilot API endpoint/key from your account, and choose a model (defaults to `gpt-4o` style).
+- **Tabby**: Select Tabby to use a self-hosted Tabby server (OpenAI-compatible). Defaults: URL `http://127.0.0.1:8080/v1/chat/completions`, model `TabbyML/StarCoder2-15B`, no API key needed unless you configured one.
 - **Local (Ollama / LM Studio)**: Select Local or toggle **Local / Network AI** and set the server URL and model (e.g., `http://localhost:11434/v1/chat/completions`, `codellama:7b`).
 
 Mock mode now produces contextual sample guidance; add a real key to exit mock mode.

@@ -14,6 +14,9 @@ const geminiModel = process.env.AI_GEMINI_MODEL || 'gemini-3.1-flash';
 const copilotUrl = process.env.AI_COPILOT_URL || 'https://api.githubcopilot.com/chat/completions';
 const copilotKey = process.env.AI_COPILOT_KEY || '';
 const copilotModel = process.env.AI_COPILOT_MODEL || 'gpt-4o';
+const tabbyUrl = process.env.AI_TABBY_URL || 'http://127.0.0.1:8080/v1/chat/completions';
+const tabbyKey = process.env.AI_TABBY_KEY || '';
+const tabbyModel = process.env.AI_TABBY_MODEL || 'TabbyML/StarCoder2-15B';
 const defaultProviderFromEnv = process.env.AI_PROVIDER || (geminiApiKey ? 'gemini' : 'openai');
 const DEFAULT_PROVIDER = defaultProviderFromEnv.toLowerCase();
 const buildGeminiUrl = (modelName) => `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
@@ -55,6 +58,10 @@ function resolveConfig(body = {}) {
     model = providedModel || copilotModel;
     apiKey = providedKey || copilotKey;
     apiUrl = providedUrl || copilotUrl;
+  } else if (provider === 'tabby') {
+    model = providedModel || tabbyModel;
+    apiKey = providedKey || tabbyKey;
+    apiUrl = providedUrl || tabbyUrl;
   } else if (useLocal) {
     apiUrl = client.localUrl || localUrl;
     model = client.localModel || localModel;
@@ -277,7 +284,7 @@ router.get('/config', (req, res) => {
     localDefaults: preferLocal ? { url: localUrl, model: localModel } : null,
     allowsClientConfig: true,
     provider: current.provider,
-    providers: ['openai', 'gemini', 'copilot', 'local'],
+    providers: ['openai', 'gemini', 'copilot', 'tabby', 'local'],
   });
 });
 
