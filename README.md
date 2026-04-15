@@ -78,6 +78,21 @@ npm start
 ```
 5. Open `http://localhost:3000` in Edge/Chrome and choose **Install this site as an app** (PWA). The service worker caches everything so the editor, Matrix rain, blood drip FX, terminal, and AI panel all work offline on Windows.
 
+### Standalone Windows EXE (no Node.js required)
+
+Package everything (Node runtime + assets) into a single Windows executable.
+
+```powershell
+# From the repo root
+npm install
+npm run build:standalone   # outputs releases/nightmare-code-console-win.exe
+```
+
+Usage:
+- Double-click `releases/nightmare-code-console-win.exe` (or run in PowerShell) — it starts the server on `http://localhost:3000`.
+- Optional: place a `.env` next to the EXE to override defaults (AI endpoint/model/port). Without it, the bundled defaults run in mock mode or local-first if you set them before building.
+- In the browser, choose **Install this site as an app** to pin it like a native editor. Everything is cached for offline use.
+
 ### Run with Docker
 
 ```bash

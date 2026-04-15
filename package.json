@@ -7,6 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "build": "node scripts/build-android.js",
+    "build:standalone:win": "npm run build && pkg . --targets node18-win-x64 --output releases/nightmare-code-console-win.exe",
+    "build:standalone": "npm run build:standalone:win",
     "cap:sync": "npm run build && npx cap sync android",
     "cap:open": "npx cap open android",
     "cap:run": "npx cap run android"
@@ -28,10 +30,17 @@
     "@capacitor/android": "^8.3.0",
     "@capacitor/cli": "^8.3.0",
     "@capacitor/core": "^8.3.0",
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "pkg": "^5.8.1"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "pkg": {
+    "assets": [
+      "dist/**/*"
+    ],
+    "outputPath": "releases"
   },
   "keywords": [
     "code-editor",
