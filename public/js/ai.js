@@ -9,24 +9,41 @@
   const sendBtn = document.getElementById('aiSendBtn');
   const clearBtn = document.getElementById('clearChatBtn');
   const badge = document.getElementById('aiBadge');
+  const statusMsg = document.getElementById('statusMsg');
 
   // History kept for context
   const history = [];
+
+  function getClientConfig() {
+    const useLocal = localStorage.getItem('nm-local-ai') === 'true';
+    const cfg = {
+      apiKey: localStorage.getItem('nm-api-key') || undefined,
+      apiUrl: localStorage.getItem('nm-api-url') || undefined,
+      model: localStorage.getItem('nm-api-model') || undefined,
+      useLocal,
+      localUrl: useLocal ? (localStorage.getItem('nm-local-ai-url') || undefined) : undefined,
+      localModel: useLocal ? (localStorage.getItem('nm-local-ai-model') || undefined) : undefined,
+    };
+    return cfg;
+  }
+
+  function setBadge(label, live, title = '') {
+    if (!badge) return;
+    badge.textContent = label;
+    badge.classList.toggle('live', live);
+    if (title) badge.title = title;
+  }
 
   // Fetch AI config on load
   fetch('/api/ai/config')
     .then((r) => r.json())
     .then((cfg) => {
-      if (badge) {
-        if (cfg.apiConfigured) {
-          const label = cfg.isLocalEndpoint ? 'LOCAL' : (cfg.model || 'LIVE');
-          badge.textContent = label;
-          badge.classList.add('live');
-          if (cfg.isLocalEndpoint) badge.title = `Local AI: ${cfg.apiUrl}`;
-        } else {
-          badge.textContent = 'MOCK';
-          badge.classList.remove('live');
-        }
+      if (!badge) return;
+      if (cfg.apiConfigured) {
+        const label = cfg.isLocalEndpoint ? 'LOCAL' : (cfg.model || 'LIVE');
+        setBadge(label, true, cfg.apiUrl || '');
+      } else {
+        setBadge('MOCK', false, 'No API key configured');
       }
     })
     .catch(() => {});
@@ -160,7 +177,7 @@
       const resp = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history, context }),
+        body: JSON.stringify({ messages: history, context, clientConfig: getClientConfig() }),
       });
 
       if (!resp.ok) {
@@ -178,9 +195,11 @@
 
       // Update badge
       if (badge) {
-        badge.textContent = data.mock ? 'MOCK' : 'LIVE';
-        if (!data.mock) badge.classList.add('live');
-        else badge.classList.remove('live');
+        const label = data.mode || (data.mock ? 'MOCK' : 'LIVE');
+        setBadge(label, !data.mock, data.apiUrl || '');
+      }
+      if (statusMsg && data.mode) {
+        statusMsg.textContent = `NightmareAI — ${data.mode}`;
       }
     } catch (err) {
       thinkingBubble.innerHTML = `<span style="color:#ff6b6b">⚠ Error: ${escHtml(err.message)}</span>`;

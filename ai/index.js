@@ -24,8 +24,50 @@ if (preferLocal && !envMockFlag && (!process.env.AI_API_URL || aiApiUrl === DEFA
   aiMockMode = false;
 }
 
-// Detect whether we are pointing at a local AI server (Ollama, LM Studio, etc.)
-const isLocalEndpoint = /localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|192\.168\.\d+\.\d+/.test(aiApiUrl);
+// Compute the effective config for this request (env defaults + client overrides)
+function resolveConfig(body = {}) {
+  const client = body.clientConfig || {};
+  const useLocal = client.useLocal === true || client.useLocal === 'true';
+
+  const providedKey = client.apiKey !== undefined ? client.apiKey : body.apiKey;
+  const providedUrl = client.apiUrl || body.apiUrl;
+  const providedModel = client.model || body.model;
+
+  let apiUrl = aiApiUrl;
+  let apiKey = aiApiKey;
+  let model = aiModel;
+
+  if (useLocal) {
+    apiUrl = client.localUrl || localUrl;
+    model = client.localModel || localModel;
+    apiKey = client.localApiKey || '';
+  } else {
+    if (providedUrl) apiUrl = providedUrl;
+    if (providedModel) model = providedModel;
+    if (providedKey !== undefined) apiKey = providedKey;
+  }
+
+  const isLocalEndpoint = /localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|192\.168\.\d+\.\d+/.test(apiUrl);
+
+  // Env mock flag wins unless the user explicitly opts into local mode
+  let mockMode = envMockFlag && !useLocal;
+  if (!mockMode) {
+    mockMode = !apiKey && !isLocalEndpoint;
+  }
+
+  const mode = mockMode ? 'MOCK' : (isLocalEndpoint ? 'LOCAL' : 'LIVE');
+
+  return {
+    apiUrl,
+    apiKey,
+    model,
+    mockMode,
+    mode,
+    isLocalEndpoint,
+    usedLocal: useLocal,
+    hasKey: Boolean(apiKey),
+  };
+}
 
 // System prompt that gives the AI context about the Nightmare Code Console
 const SYSTEM_PROMPT = `You are NightmareAI, an advanced coding assistant built into the Nightmare Code Console — 
@@ -46,6 +88,7 @@ let mockIndex = 0;
 
 router.post('/chat', async (req, res) => {
   const { messages, context } = req.body;
+  const cfg = resolveConfig(req.body || {});
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'messages array is required' });
@@ -66,7 +109,7 @@ router.post('/chat', async (req, res) => {
     });
   }
 
-  if (aiMockMode) {
+  if (cfg.mockMode) {
     // Simulate delay
     await new Promise((r) => setTimeout(r, 600));
     const reply = MOCK_RESPONSES[mockIndex % MOCK_RESPONSES.length];
@@ -75,6 +118,9 @@ router.post('/chat', async (req, res) => {
       role: 'assistant',
       content: reply,
       mock: true,
+      mode: cfg.mode,
+      apiUrl: null,
+      model: cfg.model,
     });
   }
 
@@ -83,14 +129,14 @@ router.post('/chat', async (req, res) => {
     const headers = { 'Content-Type': 'application/json' };
     // Only send Authorization header when a key is present
     // (Ollama and LM Studio don't require one)
-    if (aiApiKey) {
-      headers['Authorization'] = `Bearer ${aiApiKey}`;
+    if (cfg.apiKey) {
+      headers['Authorization'] = `Bearer ${cfg.apiKey}`;
     }
-    const response = await fetch(aiApiUrl, {
+    const response = await fetch(cfg.apiUrl, {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        model: aiModel,
+        model: cfg.model,
         messages: apiMessages,
         temperature: 0.7,
         max_tokens: 2048,
@@ -113,13 +159,16 @@ router.post('/chat', async (req, res) => {
       role: message.role,
       content: message.content,
       mock: false,
+      mode: cfg.mode,
+      apiUrl: cfg.apiUrl,
+      model: cfg.model,
     });
   } catch (err) {
     console.error('AI fetch error:', err.message);
     // Give a more helpful error when a local server is configured but unreachable
-    if (isLocalEndpoint && (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND')) {
+    if (cfg.isLocalEndpoint && (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND')) {
       return res.status(503).json({
-        error: `Local AI server not reachable at ${aiApiUrl}. ` +
+        error: `Local AI server not reachable at ${cfg.apiUrl}. ` +
           'Make sure your local AI server (Ollama, LM Studio, or llama.cpp) is running. ' +
           'For Ollama: ollama serve && ollama pull codellama:7b',
       });
@@ -130,14 +179,30 @@ router.post('/chat', async (req, res) => {
 
 // Return current AI config (without the API key)
 router.get('/config', (req, res) => {
+  const current = resolveConfig({});
   res.json({
     model: aiModel,
-    mockMode: aiMockMode,
-    apiConfigured: !aiMockMode,
-    isLocalEndpoint,
-    apiUrl: aiMockMode ? null : aiApiUrl,
+    mockMode: current.mockMode,
+    apiConfigured: !current.mockMode,
+    isLocalEndpoint: current.isLocalEndpoint,
+    apiUrl: current.mockMode ? null : current.apiUrl,
     preferLocal,
     localDefaults: preferLocal ? { url: localUrl, model: localModel } : null,
+    allowsClientConfig: true,
+  });
+});
+
+// Lightweight resolver to preview how the server will route a request with client-provided settings
+router.post('/config/resolve', (req, res) => {
+  const resolved = resolveConfig(req.body || {});
+  res.json({
+    mode: resolved.mode,
+    mockMode: resolved.mockMode,
+    apiUrl: resolved.mockMode ? null : resolved.apiUrl,
+    model: resolved.model,
+    isLocalEndpoint: resolved.isLocalEndpoint,
+    usedLocal: resolved.usedLocal,
+    apiKeyPresent: resolved.hasKey,
   });
 });
 

@@ -12,9 +12,11 @@
 |---------|---------|
 | 🖥️ **Monaco Editor** | The same engine powering VS Code — syntax highlighting, IntelliSense, 80+ languages |
 | 🤖 **NightmareAI** | OpenAI-compatible AI assistant with editor context awareness |
+| 🔑 **In-app AI Setup** | Enter API key, endpoint, and model right in Settings — no .env edits required |
 | 🌧️ **Matrix Rain** | Animated green katakana/ASCII falling character background |
 | 🩸 **Blood Drip FX** | CSS/Canvas blood dripping animations along the top of the UI |
 | 🔌 **35+ Language Plugins** | Auto-detects language from filename; manually switch via the Plugins panel |
+| 🧩 **VS Code Add-ons** | Track the VS Code extensions you rely on and copy install commands |
 | 📁 **File Explorer** | Browse and open files from the local filesystem |
 | 💻 **Integrated Terminal** | xterm.js-powered terminal with Nightmare color theme |
 | ⚙️ **Settings Panel** | Font size, tab width, word wrap, minimap, animation toggles |
@@ -152,6 +154,8 @@ The AI assistant works in **mock mode** out of the box (no API key needed). To e
 
 Supports any OpenAI-compatible endpoint — change `AI_API_URL` and `AI_MODEL` in `.env`.
 
+Prefer not to edit `.env`? Open **Settings → AI** inside the app to paste your API key, endpoint URL, and model name. Those values are stored in your browser (never written to disk on the server) and applied to every AI request immediately.
+
 ```env
 AI_API_URL=https://api.openai.com/v1/chat/completions
 AI_API_KEY=sk-...
@@ -209,7 +213,18 @@ Prefer to always default to a local model on desktop (Windows/macOS/Linux)? Set 
 
 ### UI Toggle (Quick Switch)
 
-Open **Settings → Local / Network AI** to toggle local AI and set the server URL and model name without editing `.env`. Settings are saved in browser localStorage.
+Open **Settings → Local / Network AI** to toggle local AI and set the server URL and model name without editing `.env`. Settings are saved in browser localStorage and applied instantly to the AI requests sent by the app.
+
+---
+
+## 🧩 VS Code Add-on Modules
+
+Keep track of the VS Code extensions you want alongside Nightmare Code Console:
+
+- Open **Settings → VS Code Add-on Modules**
+- Add extension IDs (e.g., `ms-python.python`, `esbenp.prettier-vscode`) and optional marketplace links
+- Click **Copy install** to grab the `code --install-extension <id>` command for your desktop VS Code
+- Entries are stored in your browser, so you can curate a personalized list without editing files
 
 ---
 

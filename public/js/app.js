@@ -37,11 +37,18 @@
   const matrixSpeedRange = document.getElementById('matrixSpeedRange');
   const aiApiKeyInput  = document.getElementById('aiApiKeyInput');
   const saveApiKeyBtn  = document.getElementById('saveApiKeyBtn');
+  const aiApiUrlInput  = document.getElementById('aiApiUrlInput');
+  const aiApiModelInput = document.getElementById('aiApiModelInput');
+  const applyAiSettingsBtn = document.getElementById('applyAiSettingsBtn');
   const localAiToggle  = document.getElementById('localAiToggle');
   const localAiSettings = document.getElementById('localAiSettings');
   const localAiUrlInput = document.getElementById('localAiUrlInput');
   const localAiModelInput = document.getElementById('localAiModelInput');
   const saveLocalAiBtn = document.getElementById('saveLocalAiBtn');
+  const addonNameInput = document.getElementById('addonNameInput');
+  const addonLinkInput = document.getElementById('addonLinkInput');
+  const addAddonBtn = document.getElementById('addAddonBtn');
+  const addonList = document.getElementById('addonList');
   const clearTermBtn   = document.getElementById('clearTermBtn');
   const searchBtn      = document.getElementById('searchBtn');
   const replaceBtn     = document.getElementById('replaceBtn');
@@ -362,19 +369,101 @@
     });
   }
 
-  // API Key (stored in localStorage for convenience - not sent to server in this implementation)
-  if (aiApiKeyInput) {
-    const saved = localStorage.getItem('nm-api-key');
-    if (saved) aiApiKeyInput.value = saved;
+  function setAiBadge(label, live, title = '') {
+    const badge = document.getElementById('aiBadge');
+    if (!badge) return;
+    badge.textContent = label;
+    badge.classList.toggle('live', live);
+    if (title) badge.title = title;
   }
+
+  async function applyAiSettings(showStatus = true) {
+    const key = aiApiKeyInput ? aiApiKeyInput.value.trim() : '';
+    const apiUrl = aiApiUrlInput ? aiApiUrlInput.value.trim() : '';
+    const apiModel = aiApiModelInput ? aiApiModelInput.value.trim() : '';
+    const useLocal = localAiToggle ? localAiToggle.checked : false;
+    const localUrl = localAiUrlInput ? localAiUrlInput.value.trim() : '';
+    const localModel = localAiModelInput ? localAiModelInput.value.trim() : '';
+
+    if (key) localStorage.setItem('nm-api-key', key);
+    else localStorage.removeItem('nm-api-key');
+
+    if (apiUrl) localStorage.setItem('nm-api-url', apiUrl);
+    else localStorage.removeItem('nm-api-url');
+
+    if (apiModel) localStorage.setItem('nm-api-model', apiModel);
+    else localStorage.removeItem('nm-api-model');
+
+    localStorage.setItem('nm-local-ai', useLocal ? 'true' : 'false');
+    if (localUrl) localStorage.setItem('nm-local-ai-url', localUrl);
+    if (localModel) localStorage.setItem('nm-local-ai-model', localModel);
+
+    try {
+      const resp = await fetch('/api/ai/config/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientConfig: {
+            apiKey: key || undefined,
+            apiUrl: apiUrl || undefined,
+            model: apiModel || undefined,
+            useLocal,
+            localUrl: localUrl || undefined,
+            localModel: localModel || undefined,
+          },
+        }),
+      });
+      const data = await resp.json();
+      const label = data.mode || (data.mockMode ? 'MOCK' : data.isLocalEndpoint ? 'LOCAL' : 'LIVE');
+      setAiBadge(label, !data.mockMode, data.apiUrl || '');
+      if (showStatus) {
+        const detail = data.apiUrl ? `(${data.apiUrl})` : '';
+        setStatus(`AI settings applied — ${label} ${detail}`);
+      }
+    } catch (err) {
+      if (showStatus) setStatus(`AI settings saved locally (unable to resolve: ${err.message})`);
+    }
+  }
+
+  async function loadAiSettingsFromStorage() {
+    if (aiApiKeyInput) {
+      const saved = localStorage.getItem('nm-api-key');
+      if (saved) aiApiKeyInput.value = saved;
+    }
+    if (aiApiUrlInput) {
+      const saved = localStorage.getItem('nm-api-url');
+      if (saved) aiApiUrlInput.value = saved;
+    }
+    if (aiApiModelInput) {
+      const saved = localStorage.getItem('nm-api-model');
+      if (saved) aiApiModelInput.value = saved;
+    }
+
+    try {
+      const resp = await fetch('/api/ai/config');
+      const cfg = await resp.json();
+      if (aiApiUrlInput && !aiApiUrlInput.value) aiApiUrlInput.value = cfg.apiUrl || '';
+      if (aiApiModelInput && !aiApiModelInput.value) aiApiModelInput.value = cfg.model || '';
+      const label = cfg.apiConfigured
+        ? (cfg.isLocalEndpoint ? 'LOCAL' : (cfg.model || 'LIVE'))
+        : 'MOCK';
+      setAiBadge(label, cfg.apiConfigured, cfg.apiUrl || '');
+    } catch {
+      // ignore
+    }
+  }
+
+  // API key + AI endpoint (stored in localStorage for convenience)
+  loadAiSettingsFromStorage();
+
   if (saveApiKeyBtn) {
     saveApiKeyBtn.addEventListener('click', () => {
-      const key = aiApiKeyInput ? aiApiKeyInput.value.trim() : '';
-      if (key) {
-        localStorage.setItem('nm-api-key', key);
-        setStatus('API key saved locally (reload to apply server-side)');
-      }
+      applyAiSettings();
     });
+  }
+
+  if (applyAiSettingsBtn) {
+    applyAiSettingsBtn.addEventListener('click', () => applyAiSettings());
   }
 
   // ── Local AI settings ──────────────────────────────────────
@@ -394,6 +483,7 @@
       const enabled = localAiToggle.checked;
       localStorage.setItem('nm-local-ai', enabled ? 'true' : 'false');
       if (localAiSettings) localAiSettings.style.display = enabled ? 'block' : 'none';
+      applyAiSettings(false);
     });
   }
 
@@ -403,11 +493,110 @@
       const model = localAiModelInput ? localAiModelInput.value.trim() : '';
       if (url) localStorage.setItem('nm-local-ai-url', url);
       if (model) localStorage.setItem('nm-local-ai-model', model);
-      setStatus('Local AI settings saved to browser. Update .env on the server and restart to apply.');
+      applyAiSettings();
     });
   }
 
   loadLocalAiSettings();
+  applyAiSettings(false);
+
+  // ── VS Code add-on modules tracker ────────────────────────
+  const defaultAddonModules = [
+    { id: 'ms-python.python', name: 'Python', link: 'https://marketplace.visualstudio.com/items?itemName=ms-python.python' },
+    { id: 'esbenp.prettier-vscode', name: 'Prettier', link: 'https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode' },
+    { id: 'dbaeumer.vscode-eslint', name: 'ESLint', link: 'https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint' },
+    { id: 'ms-vscode.cpptools', name: 'C/C++', link: 'https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools' },
+    { id: 'eamodio.gitlens', name: 'GitLens', link: 'https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens' },
+  ];
+
+  function loadAddonModules() {
+    let stored = [];
+    try {
+      stored = JSON.parse(localStorage.getItem('nm-addon-modules') || '[]');
+    } catch {
+      stored = [];
+    }
+    if (!stored || stored.length === 0) {
+      stored = defaultAddonModules;
+    }
+    renderAddonModules(stored);
+  }
+
+  function saveAddonModules(list) {
+    localStorage.setItem('nm-addon-modules', JSON.stringify(list));
+  }
+
+  function renderAddonModules(list) {
+    if (!addonList) return;
+    addonList.innerHTML = '';
+    list.forEach((addon, idx) => {
+      const item = document.createElement('div');
+      item.className = 'addon-item';
+      item.innerHTML = `
+        <div class="addon-main">
+          <div class="addon-name">${escHtml(addon.name || addon.id)}</div>
+          <div class="addon-id">${escHtml(addon.id)}</div>
+          ${addon.link ? `<a class="addon-link" href="${escHtml(addon.link)}" target="_blank" rel="noopener noreferrer">Marketplace</a>` : ''}
+        </div>
+        <div class="addon-actions">
+          <button class="btn-pill" data-action="copy" data-idx="${idx}">Copy install</button>
+          <button class="btn-pill danger" data-action="remove" data-idx="${idx}">Remove</button>
+        </div>
+      `;
+      addonList.appendChild(item);
+    });
+
+    addonList.querySelectorAll('button[data-action="copy"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx, 10);
+        const addon = list[idx];
+        if (!addon) return;
+        const cmd = `code --install-extension ${addon.id}`;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(cmd).then(() => setStatus(`Copied install command for ${addon.id}`));
+        } else {
+          setStatus(cmd);
+        }
+      });
+    });
+
+    addonList.querySelectorAll('button[data-action="remove"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx, 10);
+        const next = list.filter((_, i) => i !== idx);
+        saveAddonModules(next);
+        renderAddonModules(next);
+        setStatus('Removed add-on module');
+      });
+    });
+  }
+
+  if (addAddonBtn) {
+    addAddonBtn.addEventListener('click', () => {
+      const id = addonNameInput ? addonNameInput.value.trim() : '';
+      const link = addonLinkInput ? addonLinkInput.value.trim() : '';
+      if (!id) {
+        setStatus('Add-on ID is required (e.g., ms-python.python)');
+        return;
+      }
+      let current = [];
+      try {
+        current = JSON.parse(localStorage.getItem('nm-addon-modules') || '[]');
+      } catch {
+        current = [];
+      }
+      const name = id.includes('.') ? id.split('.').pop() : id;
+      const newEntry = { id, name, link };
+      current = [...current.filter((a) => a.id !== id), newEntry];
+      saveAddonModules(current);
+      renderAddonModules(current);
+      setStatus(`Saved VS Code add-on: ${id}`);
+      if (addonNameInput) addonNameInput.value = '';
+      if (addonLinkInput) addonLinkInput.value = '';
+    });
+  }
+
+  loadAddonModules();
 
   // ── New Tab / File ─────────────────────────────────────────
   if (newTabBtn) {
