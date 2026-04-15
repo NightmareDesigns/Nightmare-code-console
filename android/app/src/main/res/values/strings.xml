@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Nightmare Code Console</string>
+    <string name="title_activity_main">Nightmare Code Console</string>
+    <string name="package_name">com.nightmaredesigns.codeconsole</string>
+    <string name="custom_url_scheme">com.nightmaredesigns.codeconsole</string>
+</resources>
