@@ -4,7 +4,6 @@ const express = require('express');
 const router = express.Router();
 
 const DEFAULT_AI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const DEFAULT_PROVIDER = (process.env.AI_PROVIDER || 'openai').toLowerCase();
 const envMockFlag = process.env.AI_MOCK_MODE === 'true';
 const preferLocal = process.env.AI_PREFER_LOCAL === 'true';
 const localUrl = process.env.AI_LOCAL_URL || 'http://127.0.0.1:11434/v1/chat/completions';
@@ -15,10 +14,14 @@ const geminiModel = process.env.AI_GEMINI_MODEL || 'gemini-1.5-flash';
 const copilotUrl = process.env.AI_COPILOT_URL || 'https://api.githubcopilot.com/chat/completions';
 const copilotKey = process.env.AI_COPILOT_KEY || '';
 const copilotModel = process.env.AI_COPILOT_MODEL || 'gpt-4o';
+const defaultProviderFromEnv = process.env.AI_PROVIDER || (geminiApiKey ? 'gemini' : 'openai');
+const DEFAULT_PROVIDER = defaultProviderFromEnv.toLowerCase();
+const buildGeminiUrl = (modelName) => `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+const DEFAULT_GEMINI_URL = buildGeminiUrl(geminiModel);
 
-let aiApiUrl = process.env.AI_API_URL || DEFAULT_AI_API_URL;
-let aiApiKey = process.env.AI_API_KEY || '';
-let aiModel = process.env.AI_MODEL || 'gpt-3.5-turbo';
+let aiApiUrl = process.env.AI_API_URL || (DEFAULT_PROVIDER === 'gemini' ? DEFAULT_GEMINI_URL : DEFAULT_AI_API_URL);
+let aiApiKey = process.env.AI_API_KEY || (DEFAULT_PROVIDER === 'gemini' ? geminiApiKey : '');
+let aiModel = process.env.AI_MODEL || (DEFAULT_PROVIDER === 'gemini' ? geminiModel : 'gpt-3.5-turbo');
 let aiMockMode = envMockFlag || !aiApiKey || aiApiKey === 'your_api_key_here';
 
 // For desktop (Windows/macOS/Linux) users who want local AI by default,
@@ -47,7 +50,7 @@ function resolveConfig(body = {}) {
   if (provider === 'gemini') {
     model = providedModel || geminiModel;
     apiKey = providedKey || geminiApiKey;
-    apiUrl = providedUrl || `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+    apiUrl = providedUrl || buildGeminiUrl(model);
   } else if (provider === 'copilot') {
     model = providedModel || copilotModel;
     apiKey = providedKey || copilotKey;
