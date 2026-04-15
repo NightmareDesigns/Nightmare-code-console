@@ -85,10 +85,12 @@ Package everything (Node runtime + assets) into a single Windows executable.
 ```powershell
 # From the repo root
 npm install
-npm run build:standalone   # outputs releases/nightmare-code-console-win.exe
+npm run build:windows      # outputs releases/nightmare-code-console-win.exe
 ```
 
 Build settings for the EXE live in `windows-build.json` (pkg targets, dist assets, release output path). Tweak it if you need a different Node target or extra assets included.
+
+Prefer `npm run build:windows` for clarity; the existing alias `npm run build:standalone` still works.
 
 Usage:
 - Double-click `releases/nightmare-code-console-win.exe` (or run in PowerShell) — it starts the server on `http://localhost:3000`.
