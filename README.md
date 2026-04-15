@@ -12,9 +12,12 @@
 |---------|---------|
 | 🖥️ **Monaco Editor** | The same engine powering VS Code — syntax highlighting, IntelliSense, 80+ languages |
 | 🤖 **NightmareAI** | OpenAI-compatible AI assistant with editor context awareness |
+| 🔑 **In-app AI Setup** | Enter API key, endpoint, and model right in Settings — no .env edits required |
+| 🧠 **Multi-provider AI** | Switch between OpenAI-compatible, Gemini, GitHub Copilot, or Local (Ollama/LM Studio) |
 | 🌧️ **Matrix Rain** | Animated green katakana/ASCII falling character background |
 | 🩸 **Blood Drip FX** | CSS/Canvas blood dripping animations along the top of the UI |
 | 🔌 **35+ Language Plugins** | Auto-detects language from filename; manually switch via the Plugins panel |
+| 🧩 **VS Code Add-ons** | Track the VS Code extensions you rely on and copy install commands |
 | 📁 **File Explorer** | Browse and open files from the local filesystem |
 | 💻 **Integrated Terminal** | xterm.js-powered terminal with Nightmare color theme |
 | ⚙️ **Settings Panel** | Font size, tab width, word wrap, minimap, animation toggles |
@@ -31,6 +34,9 @@
 ### Run Locally
 
 ```bash
+# 0. Install Node.js + npm if missing
+bash scripts/install-node-npm.sh
+
 # 1. Clone the repository
 git clone https://github.com/NightmareDesigns/Nightmare-code-console.git
 cd Nightmare-code-console
@@ -152,6 +158,16 @@ The AI assistant works in **mock mode** out of the box (no API key needed). To e
 
 Supports any OpenAI-compatible endpoint — change `AI_API_URL` and `AI_MODEL` in `.env`.
 
+Prefer not to edit `.env`? Open **Settings → AI** inside the app to paste your API key, endpoint URL, model name, and choose a provider (OpenAI-compatible, Gemini, GitHub Copilot, or Local). Those values are stored in your browser (never written to disk on the server) and applied to every AI request immediately.
+
+### Provider quick setup
+
+- **Gemini**: Select Gemini in Settings and provide your Gemini API key. Optionally set a model (defaults to `gemini-1.5-flash`).
+- **GitHub Copilot**: Select Copilot, provide the Copilot API endpoint/key from your account, and choose a model (defaults to `gpt-4o` style).
+- **Local (Ollama / LM Studio)**: Select Local or toggle **Local / Network AI** and set the server URL and model (e.g., `http://localhost:11434/v1/chat/completions`, `codellama:7b`).
+
+Mock mode now produces contextual sample guidance; add a real key to exit mock mode.
+
 ```env
 AI_API_URL=https://api.openai.com/v1/chat/completions
 AI_API_KEY=sk-...
@@ -209,7 +225,18 @@ Prefer to always default to a local model on desktop (Windows/macOS/Linux)? Set 
 
 ### UI Toggle (Quick Switch)
 
-Open **Settings → Local / Network AI** to toggle local AI and set the server URL and model name without editing `.env`. Settings are saved in browser localStorage.
+Open **Settings → Local / Network AI** to toggle local AI and set the server URL and model name without editing `.env`. Settings are saved in browser localStorage and applied instantly to the AI requests sent by the app.
+
+---
+
+## 🧩 VS Code Add-on Modules
+
+Keep track of the VS Code extensions you want alongside Nightmare Code Console:
+
+- Open **Settings → VS Code Add-on Modules**
+- Add extension IDs (e.g., `ms-python.python`, `esbenp.prettier-vscode`) plus optional marketplace links and GitHub repos
+- Click **Copy install** to grab the `code --install-extension <id>` command for your desktop VS Code
+- Entries are stored in your browser, so you can curate a personalized list without editing files
 
 ---
 

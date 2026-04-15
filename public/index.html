@@ -206,7 +206,18 @@
               <label class="setting-label">AI API Key</label>
               <small class="setting-hint">⚠ Stored in browser localStorage only — use .env on the server for production.</small>
               <input type="password" class="search-input" id="aiApiKeyInput" placeholder="sk-... (convenience only)" aria-label="AI API key" autocomplete="off" />
-              <button class="btn-sm" id="saveApiKeyBtn" aria-label="Save API key">Save Key</button>
+              <label class="setting-label" style="margin-top:6px">Provider</label>
+              <select class="setting-select" id="aiProviderSelect" aria-label="AI provider">
+                <option value="openai" selected>OpenAI / Compatible</option>
+                <option value="gemini">Gemini</option>
+                <option value="copilot">GitHub Copilot</option>
+                <option value="local">Local / Ollama</option>
+              </select>
+              <label class="setting-label" style="margin-top:6px">Cloud AI Endpoint</label>
+              <input type="text" class="search-input" id="aiApiUrlInput" placeholder="https://api.openai.com/v1/chat/completions" aria-label="AI API URL" autocomplete="off" />
+              <label class="setting-label" style="margin-top:6px">Model Name</label>
+              <input type="text" class="search-input" id="aiApiModelInput" placeholder="gpt-4o" aria-label="AI model name" autocomplete="off" />
+              <button class="btn-sm" id="saveApiKeyBtn" aria-label="Save API key and endpoint" style="margin-top:8px">Apply AI Settings</button>
             </div>
             <div class="setting-group">
               <label class="setting-label">Local / Network AI</label>
@@ -226,6 +237,20 @@
                 💡 <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" style="color:#cc6666;text-decoration:underline">Install Ollama</a> then run:<br/>
                 <code>ollama pull codellama:7b</code>
               </small>
+            </div>
+            <div class="setting-group">
+              <button class="btn-sm" id="applyAiSettingsBtn" aria-label="Resolve AI settings" style="width:100%">Test &amp; Resolve AI Mode</button>
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">VS Code Add-on Modules</label>
+              <small class="setting-hint">Track extensions you want to install alongside Nightmare Code Console. Click a module to copy the VS Code install command.</small>
+              <div class="addon-add-row">
+                <input type="text" class="search-input" id="addonNameInput" placeholder="ms-python.python" aria-label="Add-on module ID" autocomplete="off" />
+                <input type="text" class="search-input" id="addonLinkInput" placeholder="Marketplace link or notes (optional)" aria-label="Add-on module link" autocomplete="off" />
+                <input type="text" class="search-input" id="addonRepoInput" placeholder="GitHub repo (optional)" aria-label="Add-on module repo" autocomplete="off" />
+                <button class="btn-sm" id="addAddonBtn" aria-label="Add module" style="margin-top:6px">Add Module</button>
+              </div>
+              <div class="addon-list" id="addonList"></div>
             </div>
           </div>
         </div>

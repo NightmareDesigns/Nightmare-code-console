@@ -20,11 +20,18 @@
   let animId = null;
   let speed = 5; // 1–10
   let enabled = true;
+  let userEnabled = true;
   let frameCount = 0;
 
   function resize() {
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     initDrops();
   }
 
@@ -71,6 +78,7 @@
   }
 
   function setEnabled(val) {
+    userEnabled = val;
     enabled = val;
     if (!val) ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
@@ -79,11 +87,30 @@
     speed = Math.max(1, Math.min(10, parseInt(val, 10) || 5));
   }
 
+  function pause() {
+    enabled = false;
+    if (animId) cancelAnimationFrame(animId);
+    animId = null;
+  }
+
+  function resume() {
+    enabled = userEnabled;
+    if (!animId) animId = requestAnimationFrame(tick);
+  }
+
   window.addEventListener('resize', resize);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      pause();
+    } else {
+      animId = null;
+      resize();
+      resume();
+    }
+  });
   resize();
   animId = requestAnimationFrame(tick);
 
   // Expose controls globally
   window.MatrixRain = { setEnabled, setSpeed };
 })();
-

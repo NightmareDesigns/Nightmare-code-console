@@ -330,6 +330,38 @@ html, body {
   cursor: pointer;
 }
 
+.addon-add-row { display: flex; flex-direction: column; gap: 6px; }
+.addon-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.addon-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  background: var(--bg-secondary);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+.addon-main { display: flex; flex-direction: column; gap: 2px; }
+.addon-name { font-weight: 600; color: var(--text-primary); }
+.addon-id { font-size: 11px; color: var(--text-muted); }
+.addon-links { display: flex; gap: 8px; flex-wrap: wrap; }
+.addon-link { color: var(--accent-blue); font-size: 11px; text-decoration: underline; }
+.addon-actions { display: flex; gap: 6px; }
+.btn-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  transition: background var(--transition), border-color var(--transition);
+}
+.btn-pill:hover { background: var(--bg-hover); border-color: var(--border-hover); }
+.btn-pill.danger { border-color: #6b1a1a; color: #ff9b9b; }
+.btn-pill.danger:hover { background: #2a0f0f; }
+
 /* Toggle switch */
 .toggle {
   display: flex;
