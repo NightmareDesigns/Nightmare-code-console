@@ -217,7 +217,14 @@
               <label class="setting-label" style="margin-top:6px">Cloud AI Endpoint</label>
               <input type="text" class="search-input" id="aiApiUrlInput" placeholder="https://api.openai.com/v1/chat/completions" aria-label="AI API URL" autocomplete="off" />
               <label class="setting-label" style="margin-top:6px">Model Name</label>
-              <input type="text" class="search-input" id="aiApiModelInput" placeholder="gpt-4o" aria-label="AI model name" autocomplete="off" />
+              <input type="text" class="search-input" id="aiApiModelInput" placeholder="gpt-4o" aria-label="AI model name" autocomplete="off" list="geminiModelList" />
+              <datalist id="geminiModelList">
+                <option value="gemini-1.5-flash"></option>
+                <option value="gemini-1.5-pro"></option>
+                <option value="gemini-1.5-flash-8b"></option>
+                <option value="gemini-1.5-flash-lite"></option>
+                <option value="gemini-1.0-pro"></option>
+              </datalist>
               <button class="btn-sm" id="saveApiKeyBtn" aria-label="Save API key and endpoint" style="margin-top:8px">Apply AI Settings</button>
             </div>
             <div class="setting-group">

@@ -164,7 +164,7 @@ Prefer not to edit `.env`? Open **Settings → AI** inside the app to paste your
 
 ### Provider quick setup
 
-- **Gemini**: Select Gemini in Settings and provide your Gemini API key. The endpoint now auto-fills for the chosen model (defaults to `gemini-1.5-flash`).
+- **Gemini**: Select Gemini in Settings and provide your Gemini API key. The endpoint now auto-fills for the chosen model (defaults to `gemini-1.5-flash`). Quick picks: `gemini-1.5-pro`, `gemini-1.5-flash-8b`, `gemini-1.5-flash-lite`, `gemini-1.0-pro`.
 - **GitHub Copilot**: Select Copilot, provide the Copilot API endpoint/key from your account, and choose a model (defaults to `gpt-4o` style).
 - **Local (Ollama / LM Studio)**: Select Local or toggle **Local / Network AI** and set the server URL and model (e.g., `http://localhost:11434/v1/chat/completions`, `codellama:7b`).
 

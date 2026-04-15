@@ -525,6 +525,10 @@
     }
     const providerValue = aiProviderSelect ? (aiProviderSelect.value || 'openai') : 'openai';
     applyProviderPreset(providerValue, false);
+    if (aiApiModelInput) {
+      if (providerValue === 'gemini') aiApiModelInput.setAttribute('list', 'geminiModelList');
+      else aiApiModelInput.removeAttribute('list');
+    }
   }
 
   // API key + AI endpoint (stored in localStorage for convenience)
@@ -542,6 +546,10 @@
       if (aiProviderSelect.value === 'local' && localAiToggle) {
         localAiToggle.checked = true;
         if (localAiSettings) localAiSettings.style.display = 'block';
+      }
+      if (aiApiModelInput) {
+        if (aiProviderSelect.value === 'gemini') aiApiModelInput.setAttribute('list', 'geminiModelList');
+        else aiApiModelInput.removeAttribute('list');
       }
       applyAiSettings();
     });
@@ -587,6 +595,10 @@
       if (aiProviderSelect && enabled) aiProviderSelect.value = 'local';
       if (aiProviderSelect && !enabled && aiProviderSelect.value === 'local') aiProviderSelect.value = 'openai';
       applyProviderPreset(aiProviderSelect ? aiProviderSelect.value : 'openai', true);
+      if (aiApiModelInput) {
+        if (aiProviderSelect && aiProviderSelect.value === 'gemini') aiApiModelInput.setAttribute('list', 'geminiModelList');
+        else aiApiModelInput.removeAttribute('list');
+      }
       applyAiSettings(false);
     });
   }
