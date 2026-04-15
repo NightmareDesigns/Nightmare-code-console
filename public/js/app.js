@@ -60,7 +60,7 @@
 
   const defaultOpenAiUrl = 'https://api.openai.com/v1/chat/completions';
   const defaultOpenAiModel = 'gpt-4o';
-  const defaultGeminiModel = 'gemini-1.5-flash';
+  const defaultGeminiModel = 'gemini-2.5-flash';
   const defaultGeminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${defaultGeminiModel}:generateContent`;
   const defaultCopilotUrl = 'https://api.githubcopilot.com/chat/completions';
   const defaultCopilotModel = 'gpt-4o';
