@@ -37,6 +37,7 @@
   const matrixSpeedRange = document.getElementById('matrixSpeedRange');
   const aiApiKeyInput  = document.getElementById('aiApiKeyInput');
   const saveApiKeyBtn  = document.getElementById('saveApiKeyBtn');
+  const aiProviderSelect = document.getElementById('aiProviderSelect');
   const aiApiUrlInput  = document.getElementById('aiApiUrlInput');
   const aiApiModelInput = document.getElementById('aiApiModelInput');
   const applyAiSettingsBtn = document.getElementById('applyAiSettingsBtn');
@@ -47,6 +48,7 @@
   const saveLocalAiBtn = document.getElementById('saveLocalAiBtn');
   const addonNameInput = document.getElementById('addonNameInput');
   const addonLinkInput = document.getElementById('addonLinkInput');
+  const addonRepoInput = document.getElementById('addonRepoInput');
   const addAddonBtn = document.getElementById('addAddonBtn');
   const addonList = document.getElementById('addonList');
   const clearTermBtn   = document.getElementById('clearTermBtn');
@@ -381,7 +383,8 @@
     const key = aiApiKeyInput ? aiApiKeyInput.value.trim() : '';
     const apiUrl = aiApiUrlInput ? aiApiUrlInput.value.trim() : '';
     const apiModel = aiApiModelInput ? aiApiModelInput.value.trim() : '';
-    const useLocal = localAiToggle ? localAiToggle.checked : false;
+    const provider = aiProviderSelect ? aiProviderSelect.value : 'openai';
+    const useLocal = provider === 'local' ? true : (localAiToggle ? localAiToggle.checked : false);
     const localUrl = localAiUrlInput ? localAiUrlInput.value.trim() : '';
     const localModel = localAiModelInput ? localAiModelInput.value.trim() : '';
 
@@ -394,6 +397,7 @@
     if (apiModel) localStorage.setItem('nm-api-model', apiModel);
     else localStorage.removeItem('nm-api-model');
 
+    localStorage.setItem('nm-ai-provider', provider || 'openai');
     localStorage.setItem('nm-local-ai', useLocal ? 'true' : 'false');
     if (localUrl) localStorage.setItem('nm-local-ai-url', localUrl);
     if (localModel) localStorage.setItem('nm-local-ai-model', localModel);
@@ -410,6 +414,7 @@
             useLocal,
             localUrl: localUrl || undefined,
             localModel: localModel || undefined,
+            provider,
           },
         }),
       });
@@ -438,12 +443,17 @@
       const saved = localStorage.getItem('nm-api-model');
       if (saved) aiApiModelInput.value = saved;
     }
+    if (aiProviderSelect) {
+      const saved = localStorage.getItem('nm-ai-provider') || 'openai';
+      aiProviderSelect.value = saved;
+    }
 
     try {
       const resp = await fetch('/api/ai/config');
       const cfg = await resp.json();
       if (aiApiUrlInput && !aiApiUrlInput.value) aiApiUrlInput.value = cfg.apiUrl || '';
       if (aiApiModelInput && !aiApiModelInput.value) aiApiModelInput.value = cfg.model || '';
+      if (aiProviderSelect && !aiProviderSelect.value) aiProviderSelect.value = cfg.provider || 'openai';
       const label = cfg.apiConfigured
         ? (cfg.isLocalEndpoint ? 'LOCAL' : (cfg.model || 'LIVE'))
         : 'MOCK';
@@ -462,6 +472,16 @@
     });
   }
 
+  if (aiProviderSelect) {
+    aiProviderSelect.addEventListener('change', () => {
+      if (aiProviderSelect.value === 'local' && localAiToggle) {
+        localAiToggle.checked = true;
+        if (localAiSettings) localAiSettings.style.display = 'block';
+      }
+      applyAiSettings();
+    });
+  }
+
   if (applyAiSettingsBtn) {
     applyAiSettingsBtn.addEventListener('click', () => applyAiSettings());
   }
@@ -476,6 +496,7 @@
     if (localAiUrlInput) localAiUrlInput.value = url;
     if (localAiModelInput) localAiModelInput.value = model;
     if (localAiSettings) localAiSettings.style.display = enabled ? 'block' : 'none';
+    if (aiProviderSelect && enabled) aiProviderSelect.value = 'local';
   }
 
   if (localAiToggle) {
@@ -483,6 +504,8 @@
       const enabled = localAiToggle.checked;
       localStorage.setItem('nm-local-ai', enabled ? 'true' : 'false');
       if (localAiSettings) localAiSettings.style.display = enabled ? 'block' : 'none';
+      if (aiProviderSelect && enabled) aiProviderSelect.value = 'local';
+      if (aiProviderSelect && !enabled && aiProviderSelect.value === 'local') aiProviderSelect.value = 'openai';
       applyAiSettings(false);
     });
   }
@@ -502,11 +525,15 @@
 
   // ── VS Code add-on modules tracker ────────────────────────
   const defaultAddonModules = [
-    { id: 'ms-python.python', name: 'Python', link: 'https://marketplace.visualstudio.com/items?itemName=ms-python.python' },
-    { id: 'esbenp.prettier-vscode', name: 'Prettier', link: 'https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode' },
-    { id: 'dbaeumer.vscode-eslint', name: 'ESLint', link: 'https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint' },
-    { id: 'ms-vscode.cpptools', name: 'C/C++', link: 'https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools' },
-    { id: 'eamodio.gitlens', name: 'GitLens', link: 'https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens' },
+    { id: 'ms-python.python', name: 'Python', link: 'https://marketplace.visualstudio.com/items?itemName=ms-python.python', repo: 'https://github.com/microsoft/vscode-python' },
+    { id: 'esbenp.prettier-vscode', name: 'Prettier', link: 'https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode', repo: 'https://github.com/prettier/prettier-vscode' },
+    { id: 'dbaeumer.vscode-eslint', name: 'ESLint', link: 'https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint', repo: 'https://github.com/microsoft/vscode-eslint' },
+    { id: 'ms-vscode.cpptools', name: 'C/C++', link: 'https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools', repo: 'https://github.com/microsoft/vscode-cpptools' },
+    { id: 'eamodio.gitlens', name: 'GitLens', link: 'https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens', repo: 'https://github.com/gitkraken/vscode-gitlens' },
+    { id: 'github.copilot', name: 'GitHub Copilot', link: 'https://marketplace.visualstudio.com/items?itemName=GitHub.copilot', repo: 'https://github.com/github/feedback/discussions/categories/copilot' },
+    { id: 'streetsidesoftware.code-spell-checker', name: 'Code Spell Checker', link: 'https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker', repo: 'https://github.com/streetsidesoftware/vscode-spell-checker' },
+    { id: 'gruntfuggly.todo-tree', name: 'TODO Tree', link: 'https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree', repo: 'https://github.com/Gruntfuggly/todo-tree' },
+    { id: 'ms-azuretools.vscode-docker', name: 'Docker', link: 'https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker', repo: 'https://github.com/microsoft/vscode-docker' },
   ];
 
   function loadAddonModules() {
@@ -536,7 +563,10 @@
         <div class="addon-main">
           <div class="addon-name">${escHtml(addon.name || addon.id)}</div>
           <div class="addon-id">${escHtml(addon.id)}</div>
-          ${addon.link ? `<a class="addon-link" href="${escHtml(addon.link)}" target="_blank" rel="noopener noreferrer">Marketplace</a>` : ''}
+          <div class="addon-links">
+            ${addon.link ? `<a class="addon-link" href="${escHtml(addon.link)}" target="_blank" rel="noopener noreferrer">Marketplace</a>` : ''}
+            ${addon.repo ? `<a class="addon-link" href="${escHtml(addon.repo)}" target="_blank" rel="noopener noreferrer">Repo</a>` : ''}
+          </div>
         </div>
         <div class="addon-actions">
           <button class="btn-pill" data-action="copy" data-idx="${idx}">Copy install</button>
@@ -575,6 +605,7 @@
     addAddonBtn.addEventListener('click', () => {
       const id = addonNameInput ? addonNameInput.value.trim() : '';
       const link = addonLinkInput ? addonLinkInput.value.trim() : '';
+      const repo = addonRepoInput ? addonRepoInput.value.trim() : '';
       if (!id) {
         setStatus('Add-on ID is required (e.g., ms-python.python)');
         return;
@@ -586,13 +617,14 @@
         current = [];
       }
       const name = id.includes('.') ? id.split('.').pop() : id;
-      const newEntry = { id, name, link };
+      const newEntry = { id, name, link, repo };
       current = [...current.filter((a) => a.id !== id), newEntry];
       saveAddonModules(current);
       renderAddonModules(current);
       setStatus(`Saved VS Code add-on: ${id}`);
       if (addonNameInput) addonNameInput.value = '';
       if (addonLinkInput) addonLinkInput.value = '';
+      if (addonRepoInput) addonRepoInput.value = '';
     });
   }
 

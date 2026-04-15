@@ -345,6 +345,7 @@ html, body {
 .addon-main { display: flex; flex-direction: column; gap: 2px; }
 .addon-name { font-weight: 600; color: var(--text-primary); }
 .addon-id { font-size: 11px; color: var(--text-muted); }
+.addon-links { display: flex; gap: 8px; flex-wrap: wrap; }
 .addon-link { color: var(--accent-blue); font-size: 11px; text-decoration: underline; }
 .addon-actions { display: flex; gap: 6px; }
 .btn-pill {

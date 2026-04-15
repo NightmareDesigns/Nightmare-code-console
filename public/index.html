@@ -206,6 +206,13 @@
               <label class="setting-label">AI API Key</label>
               <small class="setting-hint">⚠ Stored in browser localStorage only — use .env on the server for production.</small>
               <input type="password" class="search-input" id="aiApiKeyInput" placeholder="sk-... (convenience only)" aria-label="AI API key" autocomplete="off" />
+              <label class="setting-label" style="margin-top:6px">Provider</label>
+              <select class="setting-select" id="aiProviderSelect" aria-label="AI provider">
+                <option value="openai" selected>OpenAI / Compatible</option>
+                <option value="gemini">Gemini</option>
+                <option value="copilot">GitHub Copilot</option>
+                <option value="local">Local / Ollama</option>
+              </select>
               <label class="setting-label" style="margin-top:6px">Cloud AI Endpoint</label>
               <input type="text" class="search-input" id="aiApiUrlInput" placeholder="https://api.openai.com/v1/chat/completions" aria-label="AI API URL" autocomplete="off" />
               <label class="setting-label" style="margin-top:6px">Model Name</label>
@@ -240,6 +247,7 @@
               <div class="addon-add-row">
                 <input type="text" class="search-input" id="addonNameInput" placeholder="ms-python.python" aria-label="Add-on module ID" autocomplete="off" />
                 <input type="text" class="search-input" id="addonLinkInput" placeholder="Marketplace link or notes (optional)" aria-label="Add-on module link" autocomplete="off" />
+                <input type="text" class="search-input" id="addonRepoInput" placeholder="GitHub repo (optional)" aria-label="Add-on module repo" autocomplete="off" />
                 <button class="btn-sm" id="addAddonBtn" aria-label="Add module" style="margin-top:6px">Add Module</button>
               </div>
               <div class="addon-list" id="addonList"></div>

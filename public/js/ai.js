@@ -20,6 +20,7 @@
       apiKey: localStorage.getItem('nm-api-key') || undefined,
       apiUrl: localStorage.getItem('nm-api-url') || undefined,
       model: localStorage.getItem('nm-api-model') || undefined,
+      provider: localStorage.getItem('nm-ai-provider') || 'openai',
       useLocal,
       localUrl: useLocal ? (localStorage.getItem('nm-local-ai-url') || undefined) : undefined,
       localModel: useLocal ? (localStorage.getItem('nm-local-ai-model') || undefined) : undefined,
@@ -39,8 +40,9 @@
     .then((r) => r.json())
     .then((cfg) => {
       if (!badge) return;
+      const providerLabel = (cfg.provider || (cfg.isLocalEndpoint ? 'LOCAL' : 'OPENAI')).toUpperCase();
       if (cfg.apiConfigured) {
-        const label = cfg.isLocalEndpoint ? 'LOCAL' : (cfg.model || 'LIVE');
+        const label = cfg.isLocalEndpoint ? 'LOCAL' : providerLabel;
         setBadge(label, true, cfg.apiUrl || '');
       } else {
         setBadge('MOCK', false, 'No API key configured');
