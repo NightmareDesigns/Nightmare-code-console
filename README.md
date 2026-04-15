@@ -99,6 +99,7 @@ Build settings for the EXE live in `windows-build.json` (pkg targets, dist asset
 Usage:
 - Double-click `releases/nightmare-code-console-win.exe` (or run in PowerShell) — it starts the server on `http://localhost:3000`.
 - Optional: place a `.env` next to the EXE to override defaults (AI endpoint/model/port). Without it, the bundled defaults run in mock mode or local-first if you set them before building.
+- Gemini ready: drop a `.env` beside the EXE with `AI_PROVIDER=gemini`, `AI_GEMINI_API_KEY=<your_key>`, and optionally `AI_GEMINI_MODEL=gemini-1.5-flash` to run against Gemini without changing code.
 - In the browser, choose **Install this site as an app** to pin it like a native editor. Everything is cached for offline use.
 
 ### Run with Docker
@@ -157,13 +158,15 @@ The AI assistant works in **mock mode** out of the box (no API key needed). To e
 3. Restart the server
 
 Supports any OpenAI-compatible endpoint — change `AI_API_URL` and `AI_MODEL` in `.env`.
+If you set `AI_GEMINI_API_KEY` and leave `AI_PROVIDER` unset, the server will default to Gemini automatically (handy for Windows builds with a `.env` beside the EXE).
 
 Prefer not to edit `.env`? Open **Settings → AI** inside the app to paste your API key, endpoint URL, model name, and choose a provider (OpenAI-compatible, Gemini, GitHub Copilot, or Local). Those values are stored in your browser (never written to disk on the server) and applied to every AI request immediately.
 
 ### Provider quick setup
 
-- **Gemini**: Select Gemini in Settings and provide your Gemini API key. Optionally set a model (defaults to `gemini-1.5-flash`).
+- **Gemini**: Select Gemini in Settings and provide your Gemini API key. The endpoint now auto-fills for the chosen model (defaults to `gemini-3.1-flash`). Quick picks: `gemini-3.1-pro`, `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-1.5-pro`, `gemini-1.5-flash-8b`, `gemini-1.5-flash-lite`, `gemini-1.0-pro`.
 - **GitHub Copilot**: Select Copilot, provide the Copilot API endpoint/key from your account, and choose a model (defaults to `gpt-4o` style).
+- **Tabby**: Select Tabby to use a self-hosted Tabby server (OpenAI-compatible). Defaults: URL `http://127.0.0.1:8080/v1/chat/completions`, model `TabbyML/StarCoder2-15B`, no API key needed unless you configured one.
 - **Local (Ollama / LM Studio)**: Select Local or toggle **Local / Network AI** and set the server URL and model (e.g., `http://localhost:11434/v1/chat/completions`, `codellama:7b`).
 
 Mock mode now produces contextual sample guidance; add a real key to exit mock mode.

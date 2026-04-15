@@ -56,6 +56,16 @@
   const replaceBtn     = document.getElementById('replaceBtn');
   const openFolderBtn  = document.getElementById('openFolderBtn');
   const refreshExplorerBtn = document.getElementById('refreshExplorerBtn');
+  const providerHint   = document.getElementById('aiProviderHint');
+
+  const defaultOpenAiUrl = 'https://api.openai.com/v1/chat/completions';
+  const defaultOpenAiModel = 'gpt-4o';
+  const defaultGeminiModel = 'gemini-3.1-flash';
+  const defaultGeminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${defaultGeminiModel}:generateContent`;
+  const defaultCopilotUrl = 'https://api.githubcopilot.com/chat/completions';
+  const defaultCopilotModel = 'gpt-4o';
+  const defaultTabbyUrl = 'http://127.0.0.1:8080/v1/chat/completions';
+  const defaultTabbyModel = 'TabbyML/StarCoder2-15B';
 
   // ── Sidebar panel switcher ─────────────────────────────────
   function activateSidebarPanel(panelId) {
@@ -379,6 +389,70 @@
     if (title) badge.title = title;
   }
 
+  function applyProviderPreset(provider, overwriteDefaults = false) {
+    if (!aiApiUrlInput || !aiApiModelInput) return;
+    const currentUrl = aiApiUrlInput.value.trim();
+    const currentModel = aiApiModelInput.value.trim();
+    const hasUrl = currentUrl.length > 0;
+    const hasModel = currentModel.length > 0;
+    const shouldReplaceUrl = (fallbacks) => {
+      if (!hasUrl) return true;
+      if (!overwriteDefaults) return false;
+      return fallbacks.includes(currentUrl);
+    };
+
+    if (provider === 'gemini') {
+      if (!hasModel) aiApiModelInput.value = defaultGeminiModel;
+      const model = (aiApiModelInput.value || defaultGeminiModel).trim();
+      if (shouldReplaceUrl([defaultOpenAiUrl, defaultGeminiUrl])) {
+        aiApiUrlInput.value = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+      }
+      aiApiUrlInput.placeholder = defaultGeminiUrl;
+      if (providerHint) providerHint.textContent = 'Gemini uses your Google AI Studio key; URL auto-fills for the model.';
+      if (aiApiKeyInput) aiApiKeyInput.placeholder = 'Gemini API key';
+      return;
+    }
+
+    if (provider === 'copilot') {
+      if (!hasModel) aiApiModelInput.value = defaultCopilotModel;
+      if (shouldReplaceUrl([defaultOpenAiUrl, defaultGeminiUrl, defaultCopilotUrl])) {
+        aiApiUrlInput.value = defaultCopilotUrl;
+      }
+      aiApiUrlInput.placeholder = defaultCopilotUrl;
+      if (providerHint) providerHint.textContent = 'Copilot needs the GitHub Copilot chat endpoint and an account token.';
+      if (aiApiKeyInput) aiApiKeyInput.placeholder = 'Copilot token';
+      return;
+    }
+
+    if (provider === 'tabby') {
+      if (!hasModel) aiApiModelInput.value = defaultTabbyModel;
+      if (shouldReplaceUrl([defaultOpenAiUrl, defaultGeminiUrl, defaultCopilotUrl, defaultTabbyUrl])) {
+        aiApiUrlInput.value = defaultTabbyUrl;
+      }
+      aiApiUrlInput.placeholder = defaultTabbyUrl;
+      if (providerHint) providerHint.textContent = 'Tabby uses its OpenAI-compatible /v1/chat/completions endpoint (no key by default).';
+      if (aiApiKeyInput) aiApiKeyInput.placeholder = 'Tabby API key (optional)';
+      return;
+    }
+
+    if (provider === 'local') {
+      if (providerHint) providerHint.textContent = 'Local mode prefers Ollama/LM Studio; set URL/model below.';
+      if (aiApiKeyInput) aiApiKeyInput.placeholder = 'API key (optional for local)';
+      aiApiUrlInput.placeholder = defaultOpenAiUrl;
+      if (!hasUrl && overwriteDefaults) aiApiUrlInput.value = '';
+      return;
+    }
+
+    // OpenAI / compatible default
+    if (!hasModel) aiApiModelInput.value = defaultOpenAiModel;
+    if (shouldReplaceUrl([defaultGeminiUrl, defaultCopilotUrl, defaultOpenAiUrl])) {
+      aiApiUrlInput.value = defaultOpenAiUrl;
+    }
+    aiApiUrlInput.placeholder = defaultOpenAiUrl;
+    if (providerHint) providerHint.textContent = 'OpenAI-compatible endpoints work here (Groq, Together, etc.).';
+    if (aiApiKeyInput) aiApiKeyInput.placeholder = 'sk-...';
+  }
+
   async function applyAiSettings(showStatus = true) {
     const key = aiApiKeyInput ? aiApiKeyInput.value.trim() : '';
     const apiUrl = aiApiUrlInput ? aiApiUrlInput.value.trim() : '';
@@ -458,8 +532,15 @@
         ? (cfg.isLocalEndpoint ? 'LOCAL' : (cfg.model || 'LIVE'))
         : 'MOCK';
       setAiBadge(label, cfg.apiConfigured, cfg.apiUrl || '');
+      applyProviderPreset(aiProviderSelect ? aiProviderSelect.value : 'openai', false);
     } catch {
       // ignore
+    }
+    const providerValue = aiProviderSelect ? (aiProviderSelect.value || 'openai') : 'openai';
+    applyProviderPreset(providerValue, false);
+    if (aiApiModelInput) {
+      if (providerValue === 'gemini') aiApiModelInput.setAttribute('list', 'geminiModelList');
+      else aiApiModelInput.removeAttribute('list');
     }
   }
 
@@ -474,9 +555,14 @@
 
   if (aiProviderSelect) {
     aiProviderSelect.addEventListener('change', () => {
+      applyProviderPreset(aiProviderSelect.value, true);
       if (aiProviderSelect.value === 'local' && localAiToggle) {
         localAiToggle.checked = true;
         if (localAiSettings) localAiSettings.style.display = 'block';
+      }
+      if (aiApiModelInput) {
+        if (aiProviderSelect.value === 'gemini') aiApiModelInput.setAttribute('list', 'geminiModelList');
+        else aiApiModelInput.removeAttribute('list');
       }
       applyAiSettings();
     });
@@ -484,6 +570,20 @@
 
   if (applyAiSettingsBtn) {
     applyAiSettingsBtn.addEventListener('click', () => applyAiSettings());
+  }
+
+  if (aiApiModelInput) {
+    aiApiModelInput.addEventListener('change', () => {
+      if (!aiProviderSelect || !aiApiUrlInput) return;
+      if (aiProviderSelect.value === 'gemini') {
+        const nextModel = aiApiModelInput.value.trim() || defaultGeminiModel;
+        const currentUrl = aiApiUrlInput.value.trim();
+        const isGeminiUrl = currentUrl.startsWith('https://generativelanguage.googleapis.com/v1beta/models/');
+        if (!currentUrl || isGeminiUrl || currentUrl === defaultGeminiUrl) {
+          aiApiUrlInput.value = `https://generativelanguage.googleapis.com/v1beta/models/${nextModel}:generateContent`;
+        }
+      }
+    });
   }
 
   // ── Local AI settings ──────────────────────────────────────
@@ -497,6 +597,7 @@
     if (localAiModelInput) localAiModelInput.value = model;
     if (localAiSettings) localAiSettings.style.display = enabled ? 'block' : 'none';
     if (aiProviderSelect && enabled) aiProviderSelect.value = 'local';
+    applyProviderPreset(aiProviderSelect ? aiProviderSelect.value : 'openai', false);
   }
 
   if (localAiToggle) {
@@ -506,6 +607,11 @@
       if (localAiSettings) localAiSettings.style.display = enabled ? 'block' : 'none';
       if (aiProviderSelect && enabled) aiProviderSelect.value = 'local';
       if (aiProviderSelect && !enabled && aiProviderSelect.value === 'local') aiProviderSelect.value = 'openai';
+      applyProviderPreset(aiProviderSelect ? aiProviderSelect.value : 'openai', true);
+      if (aiApiModelInput) {
+        if (aiProviderSelect && aiProviderSelect.value === 'gemini') aiApiModelInput.setAttribute('list', 'geminiModelList');
+        else aiApiModelInput.removeAttribute('list');
+      }
       applyAiSettings(false);
     });
   }
@@ -525,6 +631,7 @@
 
   // ── VS Code add-on modules tracker ────────────────────────
   const defaultAddonModules = [
+    { id: 'google.gemini-code-assist', name: 'Gemini Code Assist', link: 'https://marketplace.visualstudio.com/items?itemName=google.gemini-code-assist', repo: 'https://cloud.google.com/gemini/docs/code-assist' },
     { id: 'ms-python.python', name: 'Python', link: 'https://marketplace.visualstudio.com/items?itemName=ms-python.python', repo: 'https://github.com/microsoft/vscode-python' },
     { id: 'esbenp.prettier-vscode', name: 'Prettier', link: 'https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode', repo: 'https://github.com/prettier/prettier-vscode' },
     { id: 'dbaeumer.vscode-eslint', name: 'ESLint', link: 'https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint', repo: 'https://github.com/microsoft/vscode-eslint' },
@@ -534,6 +641,9 @@
     { id: 'streetsidesoftware.code-spell-checker', name: 'Code Spell Checker', link: 'https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker', repo: 'https://github.com/streetsidesoftware/vscode-spell-checker' },
     { id: 'gruntfuggly.todo-tree', name: 'TODO Tree', link: 'https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree', repo: 'https://github.com/Gruntfuggly/todo-tree' },
     { id: 'ms-azuretools.vscode-docker', name: 'Docker', link: 'https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker', repo: 'https://github.com/microsoft/vscode-docker' },
+    { id: 'Continue.continue', name: 'Continue (open-source AI pair coder)', link: 'https://marketplace.visualstudio.com/items?itemName=Continue.continue', repo: 'https://github.com/continuedev/continue' },
+    { id: 'Codeium.codeium', name: 'Codeium (free AI code assistant)', link: 'https://marketplace.visualstudio.com/items?itemName=Codeium.codeium', repo: 'https://github.com/Exafunction/codeium' },
+    { id: 'TabbyML.tabby-agent', name: 'Tabby Agent', link: 'https://marketplace.visualstudio.com/items?itemName=TabbyML.tabby-agent', repo: 'https://github.com/TabbyML/tabby' }
   ];
 
   function loadAddonModules() {
