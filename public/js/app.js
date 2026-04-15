@@ -60,7 +60,7 @@
 
   const defaultOpenAiUrl = 'https://api.openai.com/v1/chat/completions';
   const defaultOpenAiModel = 'gpt-4o';
-  const defaultGeminiModel = 'gemini-2.5-flash';
+  const defaultGeminiModel = 'gemini-3.1-flash';
   const defaultGeminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${defaultGeminiModel}:generateContent`;
   const defaultCopilotUrl = 'https://api.githubcopilot.com/chat/completions';
   const defaultCopilotModel = 'gpt-4o';
@@ -628,6 +628,9 @@
     { id: 'streetsidesoftware.code-spell-checker', name: 'Code Spell Checker', link: 'https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker', repo: 'https://github.com/streetsidesoftware/vscode-spell-checker' },
     { id: 'gruntfuggly.todo-tree', name: 'TODO Tree', link: 'https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree', repo: 'https://github.com/Gruntfuggly/todo-tree' },
     { id: 'ms-azuretools.vscode-docker', name: 'Docker', link: 'https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker', repo: 'https://github.com/microsoft/vscode-docker' },
+    { id: 'Continue.continue', name: 'Continue (open-source AI pair coder)', link: 'https://marketplace.visualstudio.com/items?itemName=Continue.continue', repo: 'https://github.com/continuedev/continue' },
+    { id: 'Codeium.codeium', name: 'Codeium (free AI code assistant)', link: 'https://marketplace.visualstudio.com/items?itemName=Codeium.codeium', repo: 'https://github.com/Exafunction/codeium' },
+    { id: 'TabbyML.tabby-agent', name: 'Tabby Agent', link: 'https://marketplace.visualstudio.com/items?itemName=TabbyML.tabby-agent', repo: 'https://github.com/TabbyML/tabby' }
   ];
 
   function loadAddonModules() {
