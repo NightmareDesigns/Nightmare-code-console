@@ -34,6 +34,9 @@
 ### Run Locally
 
 ```bash
+# 0. Install Node.js + npm if missing
+bash scripts/install-node-npm.sh
+
 # 1. Clone the repository
 git clone https://github.com/NightmareDesigns/Nightmare-code-console.git
 cd Nightmare-code-console
