@@ -3,6 +3,7 @@ node_modules/
 *.log
 npm-debug.log*
 dist/
+releases/
 .DS_Store
 uploads/
 *.tmp

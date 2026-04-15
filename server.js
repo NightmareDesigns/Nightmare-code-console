@@ -15,6 +15,26 @@ const pluginsRouter = require('./plugins');
 const app = express();
 const server = http.createServer(app);
 
+// Prefer prebuilt dist/ assets for standalone/packaged builds; fallback to public/
+const useDist = fs.existsSync(path.join(__dirname, 'dist'));
+const staticRoot = path.join(__dirname, useDist ? 'dist' : 'public');
+
+// ── Helpers ──────────────────────────────────────────────────
+function isPathInsideBase(baseDir, targetPath) {
+  const resolvedBase = fs.realpathSync(baseDir);
+  let resolvedTarget;
+
+  try {
+    resolvedTarget = fs.realpathSync(targetPath);
+  } catch {
+    // Target may not exist yet (e.g., new file writes); fall back to resolved path
+    resolvedTarget = path.resolve(targetPath);
+  }
+
+  const relativePath = path.relative(resolvedBase, resolvedTarget);
+  return !relativePath.startsWith('..') && !path.isAbsolute(relativePath);
+}
+
 // WebSocket server for terminal/live features
 const wss = new WebSocketServer({ server, path: '/ws' });
 
@@ -51,14 +71,18 @@ function handleWsMessage(ws, msg) {
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(staticRoot));
 
-// Serve vendored frontend dependencies from node_modules
-app.use('/vendor/monaco', express.static(path.join(__dirname, 'node_modules/monaco-editor/min')));
-app.use('/vendor/marked', express.static(path.join(__dirname, 'node_modules/marked')));
-app.use('/vendor/hljs', express.static(path.join(__dirname, 'node_modules/highlight.js')));
-app.use('/vendor/xterm', express.static(path.join(__dirname, 'node_modules/xterm')));
-app.use('/vendor/xterm-fit', express.static(path.join(__dirname, 'node_modules/xterm-addon-fit')));
+// Serve vendored frontend dependencies
+if (useDist) {
+  app.use('/vendor', express.static(path.join(staticRoot, 'vendor')));
+} else {
+  app.use('/vendor/monaco', express.static(path.join(__dirname, 'node_modules/monaco-editor/min')));
+  app.use('/vendor/marked', express.static(path.join(__dirname, 'node_modules/marked')));
+  app.use('/vendor/hljs', express.static(path.join(__dirname, 'node_modules/highlight.js')));
+  app.use('/vendor/xterm', express.static(path.join(__dirname, 'node_modules/xterm')));
+  app.use('/vendor/xterm-fit', express.static(path.join(__dirname, 'node_modules/xterm-addon-fit')));
+}
 
 // Rate limiter for file system and AI routes (prevent abuse)
 const apiLimiter = rateLimit({
@@ -75,10 +99,10 @@ app.use('/api/plugins', pluginsRouter);
 
 // File system API
 app.get('/api/files', apiLimiter, (req, res) => {
-  const dir = path.resolve(req.query.path || process.cwd());
-  // Restrict to current working directory subtree for safety
   const cwd = process.cwd();
-  if (!dir.startsWith(cwd)) {
+  const dir = path.resolve(req.query.path || cwd);
+  // Restrict to current working directory subtree for safety
+  if (!isPathInsideBase(cwd, dir)) {
     return res.status(403).json({ error: 'Access denied' });
   }
   try {
@@ -95,9 +119,9 @@ app.get('/api/files', apiLimiter, (req, res) => {
 });
 
 app.get('/api/file', apiLimiter, (req, res) => {
-  const filePath = path.resolve(req.query.path || '');
   const cwd = process.cwd();
-  if (!filePath.startsWith(cwd)) {
+  const filePath = path.resolve(req.query.path || '');
+  if (!isPathInsideBase(cwd, filePath)) {
     return res.status(403).json({ error: 'Access denied' });
   }
   try {
@@ -112,7 +136,7 @@ app.post('/api/file', apiLimiter, (req, res) => {
   const { path: filePath, content } = req.body;
   const resolved = path.resolve(filePath || '');
   const cwd = process.cwd();
-  if (!resolved.startsWith(cwd)) {
+  if (!isPathInsideBase(cwd, resolved)) {
     return res.status(403).json({ error: 'Access denied' });
   }
   try {
@@ -131,7 +155,7 @@ app.get('/api/health', apiLimiter, (req, res) => {
 
 // Catch-all: serve the SPA
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(staticRoot, 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
@@ -141,4 +165,3 @@ server.listen(PORT, () => {
 });
 
 module.exports = { app, server };
-

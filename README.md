@@ -49,6 +49,50 @@ npm start
 open http://localhost:3000
 ```
 
+### Windows 10 (Local AI desktop install)
+
+1. Install prerequisites:
+   - [Node.js 18+](https://nodejs.org/en/download/prebuilt) — or run `winget install OpenJS.NodeJS`
+   - [Git](https://git-scm.com/download/win) — or `winget install Git.Git`
+   - Optional local model runtime:
+     - [Ollama for Windows](https://ollama.com/download) → `ollama serve` then `ollama pull codellama:7b`
+     - or [LM Studio](https://lmstudio.ai/) → start the local server (defaults to `http://127.0.0.1:1234`)
+2. Clone & configure:
+```powershell
+git clone https://github.com/NightmareDesigns/Nightmare-code-console.git
+cd Nightmare-code-console
+copy .env.example .env
+```
+3. Point the app at your local model (no cloud key required):
+```env
+AI_PREFER_LOCAL=true
+AI_LOCAL_URL=http://127.0.0.1:11434/v1/chat/completions  # Ollama default
+AI_LOCAL_MODEL=codellama:7b
+AI_MOCK_MODE=false
+```
+4. Install & start:
+```powershell
+npm install
+npm run build   # optional, copies vendors into dist/ for offline use
+npm start
+```
+5. Open `http://localhost:3000` in Edge/Chrome and choose **Install this site as an app** (PWA). The service worker caches everything so the editor, Matrix rain, blood drip FX, terminal, and AI panel all work offline on Windows.
+
+### Standalone Windows EXE (no Node.js required)
+
+Package everything (Node runtime + assets) into a single Windows executable.
+
+```powershell
+# From the repo root
+npm install
+npm run build:standalone   # outputs releases/nightmare-code-console-win.exe
+```
+
+Usage:
+- Double-click `releases/nightmare-code-console-win.exe` (or run in PowerShell) — it starts the server on `http://localhost:3000`.
+- Optional: place a `.env` next to the EXE to override defaults (AI endpoint/model/port). Without it, the bundled defaults run in mock mode or local-first if you set them before building.
+- In the browser, choose **Install this site as an app** to pin it like a native editor. Everything is cached for offline use.
+
 ### Run with Docker
 
 ```bash
@@ -158,6 +202,8 @@ AI_API_KEY=lm-studio
 AI_MODEL=local-model
 AI_MOCK_MODE=false
 ```
+
+Prefer to always default to a local model on desktop (Windows/macOS/Linux)? Set `AI_PREFER_LOCAL=true` and leave `AI_API_KEY` empty — the server will automatically use `AI_LOCAL_URL`/`AI_LOCAL_MODEL` instead of mock mode.
 
 ### UI Toggle (Quick Switch)
 
@@ -323,4 +369,3 @@ Built with:
 ---
 
 *Enter the nightmare. Code in the dark.*
-
