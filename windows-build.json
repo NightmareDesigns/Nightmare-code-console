@@ -1,0 +1,9 @@
+{
+  "pkg": {
+    "targets": ["node18-win-x64"],
+    "assets": [
+      "dist/**/*"
+    ],
+    "outputPath": "releases"
+  }
+}

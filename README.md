@@ -88,6 +88,8 @@ npm install
 npm run build:standalone   # outputs releases/nightmare-code-console-win.exe
 ```
 
+Build settings for the EXE live in `windows-build.json` (pkg targets, dist assets, release output path). Tweak it if you need a different Node target or extra assets included.
+
 Usage:
 - Double-click `releases/nightmare-code-console-win.exe` (or run in PowerShell) — it starts the server on `http://localhost:3000`.
 - Optional: place a `.env` next to the EXE to override defaults (AI endpoint/model/port). Without it, the bundled defaults run in mock mode or local-first if you set them before building.
