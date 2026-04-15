@@ -60,6 +60,40 @@ docker build -t nightmare-code-console .
 docker run -p 3000:3000 nightmare-code-console
 ```
 
+### Run on Termux (Android Terminal)
+
+You can run Nightmare Code Console directly in Termux on your Android device:
+
+```bash
+# 1. Install Termux from F-Droid (recommended) or Play Store
+# 2. Update packages
+pkg update && pkg upgrade
+
+# 3. Install Node.js and Git
+pkg install nodejs git
+
+# 4. Clone the repository
+git clone https://github.com/NightmareDesigns/Nightmare-code-console.git
+cd Nightmare-code-console
+
+# 5. Install dependencies
+npm install
+
+# 6. Start the server
+npm start
+
+# 7. Open in browser
+# The app will run on http://localhost:3000
+# Open it in Chrome or any browser on your Android device
+```
+
+**Termux Tips:**
+- Use `npm run dev` for auto-restart on file changes
+- The server binds to `0.0.0.0:3000` by default, accessible from your device
+- To access from other devices on your LAN, use your device's IP address
+- Storage access: Run `termux-setup-storage` to access device files
+- Keep Termux running: Use a wake lock app or enable "Acquire wakelock" in Termux settings
+
 ---
 
 ## 🤖 AI Configuration
@@ -144,6 +178,35 @@ The Service Worker caches all assets on first load — the IDE works even when o
 ### Android APK via Capacitor
 
 Build a native Android APK that bundles the full Node.js server on-device.
+
+#### Automated Build (GitHub Actions)
+
+The easiest way to get an APK is through the GitHub Actions workflow:
+
+1. **Trigger the workflow:**
+   - Go to the **Actions** tab in your GitHub repository
+   - Select **"Build Android APK"**
+   - Click **"Run workflow"** → **"Run workflow"**
+
+2. **Download the APK:**
+   - Wait for the workflow to complete (~5-10 minutes)
+   - Click on the completed workflow run
+   - Scroll down to **Artifacts**
+   - Download **`nightmare-code-console-debug.apk`**
+
+3. **Install on Android:**
+   - Transfer the APK to your Android device
+   - Enable "Install from unknown sources" in Settings
+   - Tap the APK file to install
+
+The workflow automatically:
+- Installs all dependencies
+- Builds web assets
+- Configures Capacitor
+- Compiles the Android APK
+- Uploads the APK as a downloadable artifact
+
+#### Manual Build (Local)
 
 #### Prerequisites
 
