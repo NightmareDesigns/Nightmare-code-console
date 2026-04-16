@@ -12,7 +12,7 @@
  * To use:
  *   1. npm install capacitor-nodejs
  *   2. npx cap sync android
- *   3. In Android MainActivity, add:
+ *   3. (Optional) If you disable auto-start, call in MainActivity:
  *        NodeJS.start("main.js");
  *
  * The WebView will reach the server at http://localhost:3000.
