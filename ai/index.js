@@ -21,6 +21,7 @@ const defaultProviderFromEnv = process.env.AI_PROVIDER || (geminiApiKey ? 'gemin
 const DEFAULT_PROVIDER = defaultProviderFromEnv.toLowerCase();
 const buildGeminiUrl = (modelName) => `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
 const DEFAULT_GEMINI_URL = buildGeminiUrl(geminiModel);
+const BUILTIN_MODEL = 'nightmare-mini';
 
 let aiApiUrl = process.env.AI_API_URL || (DEFAULT_PROVIDER === 'gemini' ? DEFAULT_GEMINI_URL : DEFAULT_AI_API_URL);
 let aiApiKey = process.env.AI_API_KEY || (DEFAULT_PROVIDER === 'gemini' ? geminiApiKey : '');
@@ -41,6 +42,20 @@ function resolveConfig(body = {}) {
   const client = body.clientConfig || {};
   const useLocal = client.useLocal === true || client.useLocal === 'true';
   const provider = (client.provider || body.provider || DEFAULT_PROVIDER || 'openai').toLowerCase();
+
+  if (provider === 'builtin' || provider === 'mini') {
+    return {
+      apiUrl: 'builtin://nightmare',
+      apiKey: '',
+      model: BUILTIN_MODEL,
+      mockMode: false,
+      mode: 'BUILT-IN',
+      isLocalEndpoint: true,
+      usedLocal: true,
+      hasKey: true,
+      provider: 'builtin',
+    };
+  }
 
   const providedKey = client.apiKey !== undefined ? client.apiKey : body.apiKey;
   const providedUrl = client.apiUrl || body.apiUrl;
@@ -135,6 +150,146 @@ function buildMockReply(messages, context, cfg) {
 
 let mockIndex = 0;
 
+function chooseLanguage(context, promptText) {
+  if (context && context.language) return context.language.toLowerCase();
+  if (/python/i.test(promptText)) return 'python';
+  if (/bash|shell/i.test(promptText)) return 'bash';
+  if (/typescript|ts/i.test(promptText)) return 'typescript';
+  if (/java\b/i.test(promptText)) return 'java';
+  if (/rust/i.test(promptText)) return 'rust';
+  if (/go\b/i.test(promptText)) return 'go';
+  return 'javascript';
+}
+
+function buildBuiltinSnippet(lang, promptText = '') {
+  const comment = (text) => {
+    if (lang === 'python' || lang === 'shell' || lang === 'bash') return `# ${text}`;
+    if (lang === 'rust') return `// ${text}`;
+    if (lang === 'go') return `// ${text}`;
+    return `// ${text}`;
+  };
+  const intent = promptText ? promptText.slice(0, 80) : 'custom helper';
+  switch (lang) {
+    case 'python':
+      return [
+        `${comment(`Nightmare MiniCoder — ${intent}`)}`,
+        'from typing import List',
+        '',
+        'def solve(input_data: str) -> str:',
+        "    lines = [line.strip() for line in input_data.split('\\n') if line.strip()]",
+        "    summary = f\"{len(lines)} lines parsed\"",
+        '    return summary',
+        '',
+        "if __name__ == '__main__':",
+        "    print(solve('example input'))",
+      ].join('\n');
+    case 'typescript':
+      return [
+        `${comment(`Nightmare MiniCoder — ${intent}`)}`,
+        'type Task = { title: string; done: boolean };',
+        '',
+        'export function toggleTask(tasks: Task[], title: string): Task[] {',
+        '  return tasks.map((t) => t.title === title ? { ...t, done: !t.done } : t);',
+        '}',
+        '',
+        'console.log(toggleTask([{ title: "example", done: false }], "example"));',
+      ].join('\n');
+    case 'go':
+      return [
+        `${comment(`Nightmare MiniCoder — ${intent}`)}`,
+        'package main',
+        '',
+        'import "fmt"',
+        '',
+        'func filter[T comparable](items []T, needle T) []T {',
+        '    out := make([]T, 0, len(items))',
+        '    for _, v := range items {',
+        '        if v != needle {',
+        '            out = append(out, v)',
+        '        }',
+        '    }',
+        '    return out',
+        '}',
+        '',
+        'func main() {',
+        '    fmt.Println(filter([]string{"a", "b", "a"}, "a"))',
+        '}',
+      ].join('\n');
+    case 'rust':
+      return [
+        `${comment(`Nightmare MiniCoder — ${intent}`)}`,
+        'fn sum_even(nums: &[i64]) -> i64 {',
+        '    nums.iter().filter(|n| *n % 2 == 0).sum()',
+        '}',
+        '',
+        'fn main() {',
+        '    println!("{}", sum_even(&[1, 2, 3, 4, 5, 6]));',
+        '}',
+      ].join('\n');
+    case 'bash':
+    case 'shell':
+      return [
+        `${comment(`Nightmare MiniCoder — ${intent}`)}`,
+        'set -euo pipefail',
+        'input=${1:-"./"}',
+        'find "$input" -maxdepth 2 -type f -name "*.js" -print',
+      ].join('\n');
+    case 'java':
+      return [
+        `${comment(`Nightmare MiniCoder — ${intent}`)}`,
+        'public class NightmareMini {',
+        '  public static int countWords(String text) {',
+        '    String[] parts = text.trim().split("\\\\s+");',
+        '    return text.isBlank() ? 0 : parts.length;',
+        '  }',
+        '  public static void main(String[] args) {',
+        '    System.out.println(countWords("Nightmare code console ready"));',
+        '  }',
+        '}',
+      ].join('\n');
+    default:
+      return [
+        `${comment(`Nightmare MiniCoder — ${intent}`)}`,
+        'function summarizeLines(text) {',
+        "  const lines = (text || '').split(/\\n/).filter(Boolean);",
+        '  return { lines: lines.length, preview: lines.slice(0, 3) };',
+        '}',
+        '',
+        "console.log(summarizeLines('hello\\nworld\\nnightmare'));",
+      ].join('\n');
+  }
+}
+
+function buildBuiltinReply(messages, context, cfg) {
+  const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+  const promptText = lastUser ? lastUser.content || '' : '';
+  const lang = chooseLanguage(context, promptText);
+  const snippet = buildBuiltinSnippet(lang, promptText);
+  const steps = [
+    'Clarify the goal and inputs.',
+    'Sketch a tiny plan with edge cases.',
+    'Implement iteratively; log or print key steps.',
+    'Add a quick self-check before shipping.',
+  ];
+  const ctxSummary = context && context.code
+    ? `Context: ${context.filename || 'untitled'} (${context.language || 'plaintext'}, ${context.code.split('\n').length} lines)`
+    : 'No editor context shared — toggle "Include editor context" for deeper help.';
+
+  return [
+    `🩸 Nightmare MiniCoder (offline) — ${cfg.model}`,
+    `Mode: BUILT-IN · Provider: ${cfg.provider}`,
+    ctxSummary,
+    '',
+    'Working steps:',
+    ...steps.map((s, i) => `${i + 1}. ${s}`),
+    '',
+    'Starter snippet:',
+    '```' + lang + '\n' + snippet + '\n```',
+    '',
+    'Need richer answers? Provide more context or switch to a cloud/local provider in Settings → AI.',
+  ].join('\n');
+}
+
 router.post('/chat', async (req, res) => {
   const { messages, context } = req.body;
   const cfg = resolveConfig(req.body || {});
@@ -174,6 +329,19 @@ router.post('/chat', async (req, res) => {
   }
 
   try {
+    if (cfg.provider === 'builtin') {
+      const reply = buildBuiltinReply(messages, context, cfg);
+      return res.json({
+        role: 'assistant',
+        content: reply,
+        mock: false,
+        mode: cfg.mode,
+        apiUrl: cfg.apiUrl,
+        model: cfg.model,
+        provider: cfg.provider,
+      });
+    }
+
     const fetch = require('node-fetch');
 
     if (cfg.provider === 'gemini') {
@@ -284,7 +452,7 @@ router.get('/config', (req, res) => {
     localDefaults: preferLocal ? { url: localUrl, model: localModel } : null,
     allowsClientConfig: true,
     provider: current.provider,
-    providers: ['openai', 'gemini', 'copilot', 'tabby', 'local'],
+    providers: ['openai', 'gemini', 'copilot', 'tabby', 'local', 'builtin'],
   });
 });
 

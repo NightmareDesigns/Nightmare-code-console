@@ -11,11 +11,12 @@
 | Feature | Details |
 |---------|---------|
 | 🖥️ **Monaco Editor** | The same engine powering VS Code — syntax highlighting, IntelliSense, 80+ languages |
-| 🤖 **NightmareAI** | OpenAI-compatible AI assistant with editor context awareness |
+| 🤖 **NightmareAI** | Built-in MiniCoder (offline) plus OpenAI/Gemini/Copilot/Tabby/local providers with editor context awareness |
 | 🔑 **In-app AI Setup** | Enter API key, endpoint, and model right in Settings — no .env edits required |
-| 🧠 **Multi-provider AI** | Switch between OpenAI-compatible, Gemini, GitHub Copilot, or Local (Ollama/LM Studio) |
+| 🧠 **Multi-provider AI** | Switch between OpenAI-compatible, Gemini, GitHub Copilot, Tabby, Local (Ollama/LM Studio), or the built-in offline model |
 | 🌧️ **Matrix Rain** | Animated green katakana/ASCII falling character background |
 | 🩸 **Blood Drip FX** | CSS/Canvas blood dripping animations along the top of the UI |
+| ⎇ **Source Control** | Git panel shows status, history, and lets you fetch/pull/push/commit without leaving the app |
 | 🔌 **35+ Language Plugins** | Auto-detects language from filename; manually switch via the Plugins panel |
 | 🧩 **VS Code Add-ons** | Track the VS Code extensions you rely on and copy install commands |
 | 📁 **File Explorer** | Browse and open files from the local filesystem |
@@ -158,6 +159,18 @@ The AI assistant works in **mock mode** out of the box (no API key needed). To e
 3. Restart the server
 
 Supports any OpenAI-compatible endpoint — change `AI_API_URL` and `AI_MODEL` in `.env`.
+
+**Built-in MiniCoder (offline):**
+- In Settings → AI, pick **Built-in Mini (offline)** to use the bundled MiniCoder without any network calls or API keys.
+- Switch to OpenAI/Gemini/Copilot/Tabby/Local when you want fuller model responses.
+
+---
+
+## ⎇ Source Control Panel
+
+- Open the **Git** tab to see branch, upstream, ahead/behind counts, and changed files.
+- Use **Refresh** to resync status, **Fetch/Pull/Push** for remote updates, and **Stage & Commit** with a message to record changes.
+- Set your upstream (e.g., `origin/main`) before pulling or pushing. If credentials are required, the underlying git command will prompt/return an error in the panel.
 If you set `AI_GEMINI_API_KEY` and leave `AI_PROVIDER` unset, the server will default to Gemini automatically (handy for Windows builds with a `.env` beside the EXE).
 
 Prefer not to edit `.env`? Open **Settings → AI** inside the app to paste your API key, endpoint URL, model name, and choose a provider (OpenAI-compatible, Gemini, GitHub Copilot, or Local). Those values are stored in your browser (never written to disk on the server) and applied to every AI request immediately.
