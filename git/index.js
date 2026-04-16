@@ -62,7 +62,11 @@ function parseLog(raw) {
     .split('\n')
     .filter(Boolean)
     .map((line) => {
-      const [hash, message, rel, author] = line.split('|');
+      const parts = line.split('|');
+      const hash = parts.shift();
+      const author = parts.pop();
+      const rel = parts.pop();
+      const message = parts.join('|');
       return { hash, message, rel, author };
     });
 }
