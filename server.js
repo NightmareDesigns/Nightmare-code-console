@@ -15,9 +15,29 @@ const pluginsRouter = require('./plugins');
 const app = express();
 const server = http.createServer(app);
 
-// Prefer prebuilt dist/ assets for standalone/packaged builds; fallback to public/
-const useDist = fs.existsSync(path.join(__dirname, 'dist'));
-const staticRoot = path.join(__dirname, useDist ? 'dist' : 'public');
+// Prefer prebuilt dist/ assets for standalone/packaged builds; fallback to public/.
+// When running inside the Capacitor NodeJS runtime, __dirname may be /.../nodejs,
+// so search common locations relative to this file.
+function findStaticRoot() {
+  const candidates = [
+    process.env.NIGHTMARE_STATIC_ROOT,
+    path.join(__dirname, 'dist'),
+    path.join(__dirname, 'public'),
+    path.join(__dirname, '..', 'dist'),
+    path.join(__dirname, '..', 'public'),
+  ].filter(Boolean);
+
+  for (const dir of candidates) {
+    if (fs.existsSync(path.join(dir, 'index.html'))) {
+      return dir;
+    }
+  }
+
+  return path.join(__dirname, 'public');
+}
+
+const staticRoot = findStaticRoot();
+const useDist = fs.existsSync(path.join(staticRoot, 'vendor'));
 
 // ── Helpers ──────────────────────────────────────────────────
 function isPathInsideBase(baseDir, targetPath) {

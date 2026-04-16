@@ -17,6 +17,20 @@ const ROOT = path.resolve(__dirname, '..');
 const DIST = path.join(ROOT, 'dist');
 const PUBLIC = path.join(ROOT, 'public');
 const NODE_MODULES = path.join(ROOT, 'node_modules');
+const NODEJS_DIST = path.join(DIST, 'nodejs');
+const SERVER_DIR = path.join(ROOT, 'server');
+const AI_DIR = path.join(ROOT, 'ai');
+const PLUGINS_DIR = path.join(ROOT, 'plugins');
+const PKG = require(path.join(ROOT, 'package.json'));
+const BACKEND_DEPS = [
+  'capacitor-nodejs',
+  'cors',
+  'dotenv',
+  'express',
+  'express-rate-limit',
+  'node-fetch',
+  'ws',
+];
 
 // ── Helpers ──────────────────────────────────────────────────
 function copyDir(src, dest) {
@@ -90,7 +104,53 @@ for (const v of vendors) {
   copyDir(v.src, v.dest);
 }
 
-// ── 3. Rewrite asset paths for offline / Capacitor ───────────
+// ── 3. Bundle Node.js backend for Capacitor ──────────────────
+console.log('🧠 Bundling Node.js backend → dist/nodejs');
+fs.rmSync(NODEJS_DIST, { recursive: true, force: true });
+fs.mkdirSync(NODEJS_DIST, { recursive: true });
+
+copyFile(path.join(SERVER_DIR, 'main.js'), path.join(NODEJS_DIST, 'main.js'));
+copyFile(path.join(ROOT, 'server.js'), path.join(NODEJS_DIST, 'server.js'));
+copyDir(AI_DIR, path.join(NODEJS_DIST, 'ai'));
+copyDir(PLUGINS_DIR, path.join(NODEJS_DIST, 'plugins'));
+
+// Generate a minimal package.json for the embedded Node runtime
+const nodePkg = {
+  name: `${PKG.name}-nodejs`,
+  version: PKG.version,
+  private: true,
+  main: 'main.js',
+  dependencies: {},
+};
+
+BACKEND_DEPS.forEach((dep) => {
+  if (PKG.dependencies && PKG.dependencies[dep]) {
+    nodePkg.dependencies[dep] = PKG.dependencies[dep];
+  } else if (PKG.devDependencies && PKG.devDependencies[dep]) {
+    nodePkg.dependencies[dep] = PKG.devDependencies[dep];
+  } else {
+    console.warn(`  [warn] backend dependency "${dep}" not found in package.json`);
+  }
+});
+
+fs.writeFileSync(path.join(NODEJS_DIST, 'package.json'), `${JSON.stringify(nodePkg, null, 2)}\n`);
+
+// Copy runtime dependencies into dist/nodejs/node_modules so the embedded
+// Node runtime has everything it needs without an extra install step.
+const NODEJS_NODE_MODULES = path.join(NODEJS_DIST, 'node_modules');
+fs.mkdirSync(NODEJS_NODE_MODULES, { recursive: true });
+
+for (const dep of Object.keys(nodePkg.dependencies)) {
+  const src = path.join(NODE_MODULES, dep);
+  const dest = path.join(NODEJS_NODE_MODULES, dep);
+  if (!fs.existsSync(src)) {
+    throw new Error(`Missing dependency "${dep}" in node_modules. Run npm install first.`);
+  }
+  console.log(`   ↳ copying ${dep}`);
+  copyDir(src, dest);
+}
+
+// ── 4. Rewrite asset paths for offline / Capacitor ───────────
 // The Capacitor webview loads files via capacitor://localhost/
 // All paths in index.html are already root-relative (/vendor/..., /css/..., etc.)
 // so no rewriting is needed — Capacitor serves them correctly.
