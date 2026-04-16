@@ -103,6 +103,15 @@ Usage:
 - Gemini ready: drop a `.env` beside the EXE with `AI_PROVIDER=gemini`, `AI_GEMINI_API_KEY=<your_key>`, and optionally `AI_GEMINI_MODEL=gemini-1.5-flash` to run against Gemini without changing code.
 - In the browser, choose **Install this site as an app** to pin it like a native editor. Everything is cached for offline use.
 
+### Windows install errors (EPERM / ENOENT)
+
+If `npm install` fails on Windows with `EPERM: operation not permitted, mkdir 'C:\'` or `ENOENT: no such file or directory, open 'C:\package.json'`, you're usually running commands from the wrong directory or from a protected path.
+
+1. Open PowerShell **inside the project folder**, e.g. `cd C:\Users\<you>\Documents\Nightmare-code-console` and confirm `package.json` is visible via `dir package.json`.
+2. Avoid running from `C:\` or other locked locations; keep the repo in a user-writable folder like `Documents` or `Downloads`.
+3. If permissions persist, reset npm's cache to a user-scoped path: `npm config set cache $env:LOCALAPPDATA\\npm-cache --global`, then retry `npm install`.
+4. Run build commands from the repo root only: `npm run build` or `npm run build:standalone`.
+
 ### Run with Docker
 
 ```bash
