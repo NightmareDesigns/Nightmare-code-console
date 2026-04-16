@@ -11,6 +11,7 @@ const rateLimit = require('express-rate-limit');
 const { WebSocketServer } = require('ws');
 const aiRouter = require('./ai');
 const pluginsRouter = require('./plugins');
+const gitRouter = require('./git');
 
 const app = express();
 const server = http.createServer(app);
@@ -96,6 +97,7 @@ const apiLimiter = rateLimit({
 // API routes
 app.use('/api/ai', apiLimiter, aiRouter);
 app.use('/api/plugins', pluginsRouter);
+app.use('/api/git', apiLimiter, gitRouter);
 
 // File system API
 app.get('/api/files', apiLimiter, (req, res) => {

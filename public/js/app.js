@@ -57,6 +57,21 @@
   const openFolderBtn  = document.getElementById('openFolderBtn');
   const refreshExplorerBtn = document.getElementById('refreshExplorerBtn');
   const providerHint   = document.getElementById('aiProviderHint');
+  const gitRefreshBtn  = document.getElementById('gitRefreshBtn');
+  const gitFetchBtn    = document.getElementById('gitFetchBtn');
+  const gitPullBtn     = document.getElementById('gitPullBtn');
+  const gitPushBtn     = document.getElementById('gitPushBtn');
+  const gitCommitBtn   = document.getElementById('gitCommitBtn');
+  const gitCommitMsg   = document.getElementById('gitCommitMsg');
+  const gitChangesList = document.getElementById('gitChangesList');
+  const gitLogList     = document.getElementById('gitLogList');
+  const gitStatusLine  = document.getElementById('gitStatusLine');
+  const gitBranchLabel = document.getElementById('gitBranch');
+  const gitUpstreamLabel = document.getElementById('gitUpstream');
+  const gitAheadLabel  = document.getElementById('gitAhead');
+  const gitBehindLabel = document.getElementById('gitBehind');
+  const gitChangesCount = document.getElementById('gitChangesCount');
+  const statusBranch   = document.getElementById('statusBranch');
 
   const defaultOpenAiUrl = 'https://api.openai.com/v1/chat/completions';
   const defaultOpenAiModel = 'gpt-4o';
@@ -66,6 +81,7 @@
   const defaultCopilotModel = 'gpt-4o';
   const defaultTabbyUrl = 'http://127.0.0.1:8080/v1/chat/completions';
   const defaultTabbyModel = 'TabbyML/StarCoder2-15B';
+  const defaultBuiltinModel = 'nightmare-mini';
 
   // ── Sidebar panel switcher ─────────────────────────────────
   function activateSidebarPanel(panelId) {
@@ -395,11 +411,32 @@
     const currentModel = aiApiModelInput.value.trim();
     const hasUrl = currentUrl.length > 0;
     const hasModel = currentModel.length > 0;
+    if (aiApiKeyInput) aiApiKeyInput.disabled = false;
+    if (aiApiUrlInput) aiApiUrlInput.disabled = false;
+    if (aiApiModelInput) aiApiModelInput.disabled = false;
     const shouldReplaceUrl = (fallbacks) => {
       if (!hasUrl) return true;
       if (!overwriteDefaults) return false;
       return fallbacks.includes(currentUrl);
     };
+
+    if (provider === 'builtin') {
+      if (aiApiModelInput && (!hasModel || overwriteDefaults)) {
+        aiApiModelInput.value = defaultBuiltinModel;
+      }
+      if (aiApiUrlInput) {
+        aiApiUrlInput.value = '';
+        aiApiUrlInput.placeholder = 'Built-in offline engine';
+        aiApiUrlInput.disabled = true;
+      }
+      if (aiApiKeyInput) {
+        aiApiKeyInput.value = '';
+        aiApiKeyInput.placeholder = 'No API key required';
+        aiApiKeyInput.disabled = true;
+      }
+      if (providerHint) providerHint.textContent = 'Built-in MiniCoder runs locally with curated templates — no network or key needed.';
+      return;
+    }
 
     if (provider === 'gemini') {
       if (!hasModel) aiApiModelInput.value = defaultGeminiModel;
@@ -461,14 +498,17 @@
     const useLocal = provider === 'local' ? true : (localAiToggle ? localAiToggle.checked : false);
     const localUrl = localAiUrlInput ? localAiUrlInput.value.trim() : '';
     const localModel = localAiModelInput ? localAiModelInput.value.trim() : '';
+    const effectiveKey = provider === 'builtin' ? '' : key;
+    const effectiveUrl = provider === 'builtin' ? '' : apiUrl;
+    const effectiveModel = provider === 'builtin' ? (apiModel || defaultBuiltinModel) : apiModel;
 
-    if (key) localStorage.setItem('nm-api-key', key);
+    if (effectiveKey) localStorage.setItem('nm-api-key', effectiveKey);
     else localStorage.removeItem('nm-api-key');
 
-    if (apiUrl) localStorage.setItem('nm-api-url', apiUrl);
+    if (effectiveUrl) localStorage.setItem('nm-api-url', effectiveUrl);
     else localStorage.removeItem('nm-api-url');
 
-    if (apiModel) localStorage.setItem('nm-api-model', apiModel);
+    if (effectiveModel) localStorage.setItem('nm-api-model', effectiveModel);
     else localStorage.removeItem('nm-api-model');
 
     localStorage.setItem('nm-ai-provider', provider || 'openai');
@@ -482,9 +522,9 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientConfig: {
-            apiKey: key || undefined,
-            apiUrl: apiUrl || undefined,
-            model: apiModel || undefined,
+            apiKey: effectiveKey || undefined,
+            apiUrl: effectiveUrl || undefined,
+            model: effectiveModel || undefined,
             useLocal,
             localUrl: localUrl || undefined,
             localModel: localModel || undefined,
@@ -529,7 +569,7 @@
       if (aiApiModelInput && !aiApiModelInput.value) aiApiModelInput.value = cfg.model || '';
       if (aiProviderSelect && !aiProviderSelect.value) aiProviderSelect.value = cfg.provider || 'openai';
       const label = cfg.apiConfigured
-        ? (cfg.isLocalEndpoint ? 'LOCAL' : (cfg.model || 'LIVE'))
+        ? (cfg.provider === 'builtin' ? 'BUILT-IN' : (cfg.isLocalEndpoint ? 'LOCAL' : (cfg.model || 'LIVE')))
         : 'MOCK';
       setAiBadge(label, cfg.apiConfigured, cfg.apiUrl || '');
       applyProviderPreset(aiProviderSelect ? aiProviderSelect.value : 'openai', false);
@@ -846,6 +886,161 @@
     });
   }
 
+  // ── Git Panel ─────────────────────────────────────────────
+  let gitBusy = false;
+
+  function setGitUiDisabled(disabled) {
+    gitBusy = disabled;
+    [gitRefreshBtn, gitFetchBtn, gitPullBtn, gitPushBtn, gitCommitBtn].forEach((btn) => {
+      if (btn) btn.disabled = disabled;
+    });
+  }
+
+  function setGitStatus(text, isError = false) {
+    if (gitStatusLine) {
+      gitStatusLine.textContent = text || '';
+      gitStatusLine.style.color = isError ? '#ff8080' : 'var(--text-secondary)';
+    }
+    if (isError) setStatus(`Git: ${text}`);
+  }
+
+  function renderGitStatus(data) {
+    const files = data && Array.isArray(data.files) ? data.files : [];
+    if (gitBranchLabel) gitBranchLabel.textContent = `⎇ ${data.branch || '--'}`;
+    if (statusBranch) statusBranch.textContent = `⎇ ${data.branch || '--'}`;
+    if (gitUpstreamLabel) gitUpstreamLabel.textContent = `upstream: ${data.upstream || 'none'}`;
+    if (gitAheadLabel) {
+      gitAheadLabel.textContent = `↑${data.ahead || 0}`;
+      gitAheadLabel.classList.toggle('alert', (data.ahead || 0) > 0);
+    }
+    if (gitBehindLabel) {
+      gitBehindLabel.textContent = `↓${data.behind || 0}`;
+      gitBehindLabel.classList.toggle('alert', (data.behind || 0) > 0);
+    }
+    if (gitChangesCount) {
+      gitChangesCount.textContent = `${files.length} change${files.length === 1 ? '' : 's'}`;
+      gitChangesCount.classList.toggle('alert', files.length > 0);
+    }
+    if (gitChangesList) {
+      gitChangesList.innerHTML = '';
+      if (files.length === 0) {
+        gitChangesList.innerHTML = '<div class="git-change"><div class="file">Working tree clean</div></div>';
+      } else {
+        files.forEach((f) => {
+          const row = document.createElement('div');
+          row.className = 'git-change';
+          row.innerHTML = `
+            <div class="file" title="${escHtml(f.file)}">${escHtml(f.file)}</div>
+            <div class="state">${escHtml(f.status)}</div>
+          `;
+          gitChangesList.appendChild(row);
+        });
+      }
+    }
+  }
+
+  function renderGitLog(commits = []) {
+    if (!gitLogList) return;
+    gitLogList.innerHTML = '';
+    if (!commits.length) {
+      gitLogList.innerHTML = '<div class="git-log-item"><div class="file">No commits yet</div></div>';
+      return;
+    }
+    commits.forEach((c) => {
+      const row = document.createElement('div');
+      row.className = 'git-log-item';
+      row.innerHTML = `
+        <div class="git-log-left">
+          <span class="git-log-hash">${escHtml(c.hash)}</span>
+          <span class="file">${escHtml(c.message)}</span>
+        </div>
+        <div class="git-log-meta">${escHtml(c.rel || '')}${c.author ? ` · ${escHtml(c.author)}` : ''}</div>
+      `;
+      gitLogList.appendChild(row);
+    });
+  }
+
+  async function loadGitStatus(showToast = false) {
+    if (gitBusy) return;
+    setGitUiDisabled(true);
+    try {
+      const resp = await fetch('/api/git/status');
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Failed to read git status');
+      renderGitStatus(data);
+      if (showToast) setStatus('Git status refreshed');
+      setGitStatus(data.upstream ? `Tracking ${data.upstream}` : 'No upstream set');
+    } catch (err) {
+      setGitStatus(err.message || 'Git status unavailable', true);
+      if (gitChangesList) {
+        gitChangesList.innerHTML = `<div class="git-change"><div class="file">${escHtml(err.message || 'Git not available')}</div></div>`;
+      }
+    } finally {
+      setGitUiDisabled(false);
+    }
+  }
+
+  async function loadGitLog() {
+    try {
+      const resp = await fetch('/api/git/log?limit=15');
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Failed to read log');
+      renderGitLog(data.commits || []);
+    } catch (err) {
+      setGitStatus(err.message || 'Git log unavailable', true);
+      if (gitLogList) gitLogList.innerHTML = `<div class="git-log-item">${escHtml(err.message || 'Git not available')}</div>`;
+    }
+  }
+
+  async function runGitAction(action) {
+    if (gitBusy) return;
+    setGitUiDisabled(true);
+    try {
+      const resp = await fetch(`/api/git/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || `${action} failed`);
+      setGitStatus(`${action} ok`);
+      await loadGitStatus(false);
+      await loadGitLog();
+    } catch (err) {
+      setGitStatus(err.message || `Git ${action} failed`, true);
+    } finally {
+      setGitUiDisabled(false);
+    }
+  }
+
+  async function commitChanges() {
+    const msg = gitCommitMsg ? gitCommitMsg.value.trim() : '';
+    if (!msg) {
+      setGitStatus('Commit message required', true);
+      return;
+    }
+    setGitUiDisabled(true);
+    try {
+      const resp = await fetch('/api/git/commit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Commit failed');
+      if (gitCommitMsg) gitCommitMsg.value = '';
+      setGitStatus('Commit created');
+      await loadGitStatus(false);
+      await loadGitLog();
+    } catch (err) {
+      setGitStatus(err.message || 'Commit failed', true);
+    } finally {
+      setGitUiDisabled(false);
+    }
+  }
+
+  if (gitRefreshBtn) gitRefreshBtn.addEventListener('click', () => { loadGitStatus(true); loadGitLog(); });
+  if (gitFetchBtn) gitFetchBtn.addEventListener('click', () => runGitAction('fetch'));
+  if (gitPullBtn) gitPullBtn.addEventListener('click', () => runGitAction('pull'));
+  if (gitPushBtn) gitPushBtn.addEventListener('click', () => runGitAction('push'));
+  if (gitCommitBtn) gitCommitBtn.addEventListener('click', () => commitChanges());
+
   // ── Keyboard Shortcuts ─────────────────────────────────────
   document.addEventListener('keydown', (e) => {
     // Ctrl+B — toggle sidebar
@@ -941,6 +1136,8 @@
     initTerminal();
     initWebSocket();
     loadFileTree();
+    loadGitStatus();
+    loadGitLog();
   });
 
   // Fallback init if editor-ready never fires
@@ -951,6 +1148,8 @@
     }
     if (!wsClient) initWebSocket();
     loadFileTree();
+    loadGitStatus();
+    loadGitLog();
   }, 3000);
 
   window.NightmareApp = { setStatus, logToConsole, loadFileTree, runCode };

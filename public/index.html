@@ -148,7 +148,36 @@
         <div class="sidebar-panel" id="panel-git">
           <div class="panel-header"><span>SOURCE CONTROL</span></div>
           <div class="git-info" id="gitInfo">
-            <p class="git-hint">Git integration coming soon.<br/>Use the terminal panel for git commands.</p>
+            <div class="git-summary">
+              <div class="git-branch-line">
+                <span class="git-pill" id="gitBranch">⎇ --</span>
+                <span class="git-pill subtle" id="gitUpstream">upstream: --</span>
+              </div>
+              <div class="git-counters">
+                <span class="git-counter" id="gitAhead">↑0</span>
+                <span class="git-counter" id="gitBehind">↓0</span>
+                <span class="git-counter" id="gitChangesCount">0 changes</span>
+              </div>
+            </div>
+            <div class="git-actions-row">
+              <button class="btn-sm" id="gitRefreshBtn" aria-label="Refresh git status">Refresh</button>
+              <button class="btn-sm" id="gitFetchBtn" aria-label="Fetch from remote">Fetch</button>
+              <button class="btn-sm" id="gitPullBtn" aria-label="Pull latest">Pull</button>
+              <button class="btn-sm" id="gitPushBtn" aria-label="Push changes">Push</button>
+            </div>
+            <div class="git-commit">
+              <input type="text" class="search-input" id="gitCommitMsg" placeholder="Commit message..." aria-label="Commit message" autocomplete="off" />
+              <button class="btn-sm" id="gitCommitBtn" aria-label="Commit staged changes">Stage &amp; Commit</button>
+            </div>
+            <div class="git-section">
+              <div class="panel-header-sub">CHANGES</div>
+              <div class="git-changes" id="gitChangesList"></div>
+            </div>
+            <div class="git-section">
+              <div class="panel-header-sub">RECENT COMMITS</div>
+              <div class="git-log-list" id="gitLogList"></div>
+            </div>
+            <div class="git-status-line" id="gitStatusLine"></div>
           </div>
         </div>
 
@@ -208,6 +237,7 @@
               <input type="password" class="search-input" id="aiApiKeyInput" placeholder="sk-... (convenience only)" aria-label="AI API key" autocomplete="off" />
               <label class="setting-label" style="margin-top:6px">Provider</label>
               <select class="setting-select" id="aiProviderSelect" aria-label="AI provider">
+                <option value="builtin">Built-in Mini (offline)</option>
                 <option value="openai" selected>OpenAI / Compatible</option>
                 <option value="gemini">Gemini</option>
                 <option value="copilot">GitHub Copilot</option>
