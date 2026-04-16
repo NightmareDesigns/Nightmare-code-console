@@ -12,7 +12,7 @@
  * To use:
  *   1. npm install capacitor-nodejs
  *   2. npx cap sync android
- *   3. In Android MainActivity, add:
+ *   3. (Optional) If you disable auto-start, call in MainActivity:
  *        NodeJS.start("main.js");
  *
  * The WebView will reach the server at http://localhost:3000.
@@ -33,5 +33,30 @@ try {
 }
 
 // Start the Express server on port 3000
-process.env.PORT = '3000';
-require('../server.js');
+const fs = require('fs');
+const path = require('path');
+
+process.env.PORT = process.env.PORT || '3000';
+
+// Allow overriding the static root for packaged builds (e.g., Capacitor nodejs dir)
+if (!process.env.NIGHTMARE_STATIC_ROOT) {
+  process.env.NIGHTMARE_STATIC_ROOT = path.resolve(__dirname, '..');
+}
+
+try {
+  process.chdir(process.env.NIGHTMARE_STATIC_ROOT);
+} catch (err) {
+  console.warn('[server/main.js] unable to set working directory:', err.message);
+}
+
+const serverEntry = (() => {
+  const local = path.join(__dirname, 'server.js');
+  if (fs.existsSync(local)) return local;
+
+  const parent = path.join(__dirname, '..', 'server.js');
+  if (fs.existsSync(parent)) return parent;
+
+  throw new Error('[server/main.js] server.js not found');
+})();
+
+require(serverEntry);
