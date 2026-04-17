@@ -20,7 +20,7 @@
       apiKey: localStorage.getItem('nm-api-key') || undefined,
       apiUrl: localStorage.getItem('nm-api-url') || undefined,
       model: localStorage.getItem('nm-api-model') || undefined,
-      provider: localStorage.getItem('nm-ai-provider') || 'openai',
+      provider: localStorage.getItem('nm-ai-provider') || 'builtin',
       useLocal,
       localUrl: useLocal ? (localStorage.getItem('nm-local-ai-url') || undefined) : undefined,
       localModel: useLocal ? (localStorage.getItem('nm-local-ai-model') || undefined) : undefined,

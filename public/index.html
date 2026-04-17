@@ -164,6 +164,7 @@
               <button class="btn-sm" id="gitFetchBtn" aria-label="Fetch from remote">Fetch</button>
               <button class="btn-sm" id="gitPullBtn" aria-label="Pull latest">Pull</button>
               <button class="btn-sm" id="gitPushBtn" aria-label="Push changes">Push</button>
+              <button class="btn-sm" id="gitDeleteMergedBtn" aria-label="Delete merged local branches">Delete merged</button>
             </div>
             <div class="git-commit">
               <input type="text" class="search-input" id="gitCommitMsg" placeholder="Commit message..." aria-label="Commit message" autocomplete="off" />
@@ -237,8 +238,8 @@
               <input type="password" class="search-input" id="aiApiKeyInput" placeholder="sk-... (convenience only)" aria-label="AI API key" autocomplete="off" />
               <label class="setting-label" style="margin-top:6px">Provider</label>
               <select class="setting-select" id="aiProviderSelect" aria-label="AI provider">
-                <option value="builtin">Built-in Mini (offline)</option>
-                <option value="openai" selected>OpenAI / Compatible</option>
+                <option value="builtin" selected>Built-in Mini (offline)</option>
+                <option value="openai">OpenAI / Compatible</option>
                 <option value="gemini">Gemini</option>
                 <option value="copilot">GitHub Copilot</option>
                 <option value="tabby">Tabby (self-hosted)</option>
@@ -274,11 +275,11 @@
               <label class="setting-label">AI Server URL</label>
               <input type="text" class="search-input" id="localAiUrlInput" placeholder="http://localhost:11434/v1/chat/completions" aria-label="Local AI server URL" autocomplete="off" />
               <label class="setting-label" style="margin-top:8px">Model Name</label>
-              <input type="text" class="search-input" id="localAiModelInput" placeholder="codellama:7b" aria-label="Local AI model name" autocomplete="off" />
+              <input type="text" class="search-input" id="localAiModelInput" placeholder="qwen2.5-coder:3b" aria-label="Local AI model name" autocomplete="off" />
               <button class="btn-sm" id="saveLocalAiBtn" aria-label="Save local AI settings" style="margin-top:8px">Save &amp; Apply</button>
               <small class="setting-hint" style="margin-top:6px">
                 💡 <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" style="color:#cc6666;text-decoration:underline">Install Ollama</a> then run:<br/>
-                <code>ollama pull codellama:7b</code>
+                <code>ollama pull qwen2.5-coder:3b</code>
               </small>
             </div>
             <div class="setting-group">
