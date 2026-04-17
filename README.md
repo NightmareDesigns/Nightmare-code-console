@@ -62,7 +62,7 @@ open http://localhost:3000
    - [Node.js 18+](https://nodejs.org/en/download/prebuilt) — or run `winget install OpenJS.NodeJS`
    - [Git](https://git-scm.com/download/win) — or `winget install Git.Git`
    - Optional local model runtime:
-     - [Ollama for Windows](https://ollama.com/download) → `ollama serve` then `ollama pull codellama:7b`
+     - [Ollama for Windows](https://ollama.com/download) → `ollama serve` then `ollama pull qwen2.5-coder:3b`
      - or [LM Studio](https://lmstudio.ai/) → start the local server (defaults to `http://127.0.0.1:1234`)
 2. Clone & configure:
 ```powershell
@@ -74,7 +74,7 @@ copy .env.example .env
 ```env
 AI_PREFER_LOCAL=true
 AI_LOCAL_URL=http://127.0.0.1:11434/v1/chat/completions  # Ollama default
-AI_LOCAL_MODEL=codellama:7b
+AI_LOCAL_MODEL=qwen2.5-coder:3b
 AI_MOCK_MODE=false
 ```
 4. Install & start:
@@ -189,7 +189,7 @@ Prefer not to edit `.env`? Open **Settings → AI** inside the app to paste your
 - **Gemini**: Select Gemini in Settings and provide your Gemini API key. The endpoint now auto-fills for the chosen model (defaults to `gemini-3.1-flash`). Quick picks: `gemini-3.1-pro`, `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-1.5-pro`, `gemini-1.5-flash-8b`, `gemini-1.5-flash-lite`, `gemini-1.0-pro`.
 - **GitHub Copilot**: Select Copilot, provide the Copilot API endpoint/key from your account, and choose a model (defaults to `gpt-4o` style).
 - **Tabby**: Select Tabby to use a self-hosted Tabby server (OpenAI-compatible). Defaults: URL `http://127.0.0.1:8080/v1/chat/completions`, model `TabbyML/StarCoder2-15B`, no API key needed unless you configured one.
-- **Local (Ollama / LM Studio)**: Select Local or toggle **Local / Network AI** and set the server URL and model (e.g., `http://localhost:11434/v1/chat/completions`, `codellama:7b`).
+- **Local (Ollama / LM Studio)**: Select Local or toggle **Local / Network AI** and set the server URL and model (e.g., `http://localhost:11434/v1/chat/completions`, `qwen2.5-coder:3b`).
 
 Mock mode now produces contextual sample guidance; add a real key to exit mock mode.
 
@@ -217,7 +217,7 @@ Run the AI assistant **completely offline** on your own machine — no API key, 
 ollama serve
 
 # 3. Pull a coding model
-ollama pull codellama:7b        # ~4 GB — best for code
+ollama pull qwen2.5-coder:3b    # ~4 GB — great for code
 ollama pull deepseek-coder:6.7b # ~4 GB — excellent for code
 ollama pull mistral:7b          # ~4 GB — great general model
 
@@ -229,7 +229,7 @@ In your `.env`:
 ```env
 AI_API_URL=http://localhost:11434/v1/chat/completions
 AI_API_KEY=
-AI_MODEL=codellama:7b
+AI_MODEL=qwen2.5-coder:3b
 AI_MOCK_MODE=false
 ```
 

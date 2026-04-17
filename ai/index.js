@@ -7,7 +7,7 @@ const DEFAULT_AI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const envMockFlag = process.env.AI_MOCK_MODE === 'true';
 const preferLocal = process.env.AI_PREFER_LOCAL === 'true';
 const localUrl = process.env.AI_LOCAL_URL || 'http://127.0.0.1:11434/v1/chat/completions';
-const localModel = process.env.AI_LOCAL_MODEL || 'codellama:7b';
+const localModel = process.env.AI_LOCAL_MODEL || 'qwen2.5-coder:3b';
 const localApiKey = process.env.AI_LOCAL_API_KEY || '';
 const geminiApiKey = process.env.AI_GEMINI_API_KEY || '';
 const geminiModel = process.env.AI_GEMINI_MODEL || 'gemini-3.1-flash';
@@ -448,7 +448,7 @@ router.post('/chat', async (req, res) => {
       return res.status(503).json({
         error: `Local AI server not reachable at ${cfg.apiUrl}. ` +
           'Make sure your local AI server (Ollama, LM Studio, or llama.cpp) is running. ' +
-          'For Ollama: ollama serve && ollama pull codellama:7b',
+          'For Ollama: ollama serve && ollama pull qwen2.5-coder:3b',
       });
     }
     res.status(500).json({ error: 'Failed to reach AI service' });

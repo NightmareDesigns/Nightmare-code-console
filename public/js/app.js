@@ -631,7 +631,7 @@
   function loadLocalAiSettings() {
     const enabled = localStorage.getItem('nm-local-ai') === 'true';
     const url = localStorage.getItem('nm-local-ai-url') || 'http://localhost:11434/v1/chat/completions';
-    const model = localStorage.getItem('nm-local-ai-model') || 'codellama:7b';
+    const model = localStorage.getItem('nm-local-ai-model') || 'qwen2.5-coder:3b';
 
     if (localAiToggle) localAiToggle.checked = enabled;
     if (localAiUrlInput) localAiUrlInput.value = url;
