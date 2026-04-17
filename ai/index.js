@@ -17,16 +17,32 @@ const copilotModel = process.env.AI_COPILOT_MODEL || 'gpt-4o';
 const tabbyUrl = process.env.AI_TABBY_URL || 'http://127.0.0.1:8080/v1/chat/completions';
 const tabbyKey = process.env.AI_TABBY_KEY || '';
 const tabbyModel = process.env.AI_TABBY_MODEL || 'TabbyML/StarCoder2-15B';
-const defaultProviderFromEnv = process.env.AI_PROVIDER || (geminiApiKey ? 'gemini' : 'openai');
-const DEFAULT_PROVIDER = defaultProviderFromEnv.toLowerCase();
+const envProvider = (process.env.AI_PROVIDER || '').toLowerCase();
+const defaultProviderFromEnv = envProvider || (geminiApiKey ? 'gemini' : '');
+const fallbackProvider = defaultProviderFromEnv || ((process.env.AI_API_URL || process.env.AI_API_KEY) ? 'openai' : 'builtin');
+const DEFAULT_PROVIDER = (fallbackProvider || 'builtin').toLowerCase();
 const buildGeminiUrl = (modelName) => `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
 const DEFAULT_GEMINI_URL = buildGeminiUrl(geminiModel);
 const BUILTIN_MODEL = 'nightmare-mini';
 
-let aiApiUrl = process.env.AI_API_URL || (DEFAULT_PROVIDER === 'gemini' ? DEFAULT_GEMINI_URL : DEFAULT_AI_API_URL);
-let aiApiKey = process.env.AI_API_KEY || (DEFAULT_PROVIDER === 'gemini' ? geminiApiKey : '');
-let aiModel = process.env.AI_MODEL || (DEFAULT_PROVIDER === 'gemini' ? geminiModel : 'gpt-3.5-turbo');
-let aiMockMode = envMockFlag || !aiApiKey || aiApiKey === 'your_api_key_here';
+const providerDefaults = {
+  gemini: { url: DEFAULT_GEMINI_URL, key: geminiApiKey, model: geminiModel },
+  copilot: { url: copilotUrl, key: copilotKey, model: copilotModel },
+  tabby: { url: tabbyUrl, key: tabbyKey, model: tabbyModel },
+  builtin: { url: 'builtin://nightmare', key: '', model: BUILTIN_MODEL },
+  local: { url: localUrl, key: localApiKey, model: localModel },
+  openai: { url: DEFAULT_AI_API_URL, key: '', model: 'gpt-3.5-turbo' },
+};
+const baseDefaults = providerDefaults[DEFAULT_PROVIDER] || providerDefaults.openai;
+
+let aiApiUrl = DEFAULT_PROVIDER === 'builtin'
+  ? baseDefaults.url
+  : (process.env.AI_API_URL || baseDefaults.url);
+let aiApiKey = DEFAULT_PROVIDER === 'builtin'
+  ? ''
+  : (process.env.AI_API_KEY || baseDefaults.key);
+let aiModel = process.env.AI_MODEL || baseDefaults.model;
+let aiMockMode = envMockFlag || (!aiApiKey && DEFAULT_PROVIDER !== 'builtin');
 
 // For desktop (Windows/macOS/Linux) users who want local AI by default,
 // allow opting in without forcing AI_MOCK_MODE=false or an API key.

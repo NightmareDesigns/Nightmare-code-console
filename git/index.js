@@ -160,4 +160,40 @@ router.post('/push', async (req, res) => {
   }
 });
 
+router.post('/cleanup-merged', async (req, res) => {
+  try {
+    await ensureRepo();
+    const { stdout: currentBranchOut } = await runGit(['rev-parse', '--abbrev-ref', 'HEAD']);
+    const currentBranch = currentBranchOut.trim();
+
+    const { stdout: mergedOut } = await runGit(['branch', '--merged']);
+    const mergedBranches = mergedOut
+      .split('\n')
+      .map((line) => line.replace(/^\*\s*/, '').trim())
+      .filter(Boolean)
+      .filter((name) => !['HEAD', currentBranch, 'main', 'master', 'develop'].includes(name));
+
+    const deleted = [];
+    const skipped = [];
+
+    for (const branch of mergedBranches) {
+      try {
+        await runGit(['branch', '-d', branch]);
+        deleted.push(branch);
+      } catch (err) {
+        skipped.push({ branch, error: err.message.trim() });
+      }
+    }
+
+    return res.json({
+      success: true,
+      deleted,
+      skipped,
+      currentBranch,
+    });
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
 module.exports = router;

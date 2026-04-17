@@ -61,6 +61,7 @@
   const gitFetchBtn    = document.getElementById('gitFetchBtn');
   const gitPullBtn     = document.getElementById('gitPullBtn');
   const gitPushBtn     = document.getElementById('gitPushBtn');
+  const gitDeleteMergedBtn = document.getElementById('gitDeleteMergedBtn');
   const gitCommitBtn   = document.getElementById('gitCommitBtn');
   const gitCommitMsg   = document.getElementById('gitCommitMsg');
   const gitChangesList = document.getElementById('gitChangesList');
@@ -494,7 +495,7 @@
     const key = aiApiKeyInput ? aiApiKeyInput.value.trim() : '';
     const apiUrl = aiApiUrlInput ? aiApiUrlInput.value.trim() : '';
     const apiModel = aiApiModelInput ? aiApiModelInput.value.trim() : '';
-    const provider = aiProviderSelect ? aiProviderSelect.value : 'openai';
+    const provider = aiProviderSelect ? aiProviderSelect.value : 'builtin';
     const useLocal = provider === 'local' ? true : (localAiToggle ? localAiToggle.checked : false);
     const localUrl = localAiUrlInput ? localAiUrlInput.value.trim() : '';
     const localModel = localAiModelInput ? localAiModelInput.value.trim() : '';
@@ -511,7 +512,7 @@
     if (effectiveModel) localStorage.setItem('nm-api-model', effectiveModel);
     else localStorage.removeItem('nm-api-model');
 
-    localStorage.setItem('nm-ai-provider', provider || 'openai');
+    localStorage.setItem('nm-ai-provider', provider || 'builtin');
     localStorage.setItem('nm-local-ai', useLocal ? 'true' : 'false');
     if (localUrl) localStorage.setItem('nm-local-ai-url', localUrl);
     if (localModel) localStorage.setItem('nm-local-ai-model', localModel);
@@ -558,8 +559,8 @@
       if (saved) aiApiModelInput.value = saved;
     }
     if (aiProviderSelect) {
-      const saved = localStorage.getItem('nm-ai-provider') || 'openai';
-      aiProviderSelect.value = saved;
+      const saved = localStorage.getItem('nm-ai-provider');
+      if (saved) aiProviderSelect.value = saved;
     }
 
     try {
@@ -567,16 +568,16 @@
       const cfg = await resp.json();
       if (aiApiUrlInput && !aiApiUrlInput.value) aiApiUrlInput.value = cfg.apiUrl || '';
       if (aiApiModelInput && !aiApiModelInput.value) aiApiModelInput.value = cfg.model || '';
-      if (aiProviderSelect && !aiProviderSelect.value) aiProviderSelect.value = cfg.provider || 'openai';
+      if (aiProviderSelect && !aiProviderSelect.value) aiProviderSelect.value = cfg.provider || 'builtin';
       const label = cfg.apiConfigured
         ? (cfg.provider === 'builtin' ? 'BUILT-IN' : (cfg.isLocalEndpoint ? 'LOCAL' : (cfg.model || 'LIVE')))
         : 'MOCK';
       setAiBadge(label, cfg.apiConfigured, cfg.apiUrl || '');
-      applyProviderPreset(aiProviderSelect ? aiProviderSelect.value : 'openai', false);
+      applyProviderPreset(aiProviderSelect ? aiProviderSelect.value : 'builtin', false);
     } catch {
       // ignore
     }
-    const providerValue = aiProviderSelect ? (aiProviderSelect.value || 'openai') : 'openai';
+    const providerValue = aiProviderSelect ? (aiProviderSelect.value || 'builtin') : 'builtin';
     applyProviderPreset(providerValue, false);
     if (aiApiModelInput) {
       if (providerValue === 'gemini') aiApiModelInput.setAttribute('list', 'geminiModelList');
@@ -637,7 +638,7 @@
     if (localAiModelInput) localAiModelInput.value = model;
     if (localAiSettings) localAiSettings.style.display = enabled ? 'block' : 'none';
     if (aiProviderSelect && enabled) aiProviderSelect.value = 'local';
-    applyProviderPreset(aiProviderSelect ? aiProviderSelect.value : 'openai', false);
+    applyProviderPreset(aiProviderSelect ? aiProviderSelect.value : 'builtin', false);
   }
 
   if (localAiToggle) {
@@ -646,8 +647,8 @@
       localStorage.setItem('nm-local-ai', enabled ? 'true' : 'false');
       if (localAiSettings) localAiSettings.style.display = enabled ? 'block' : 'none';
       if (aiProviderSelect && enabled) aiProviderSelect.value = 'local';
-      if (aiProviderSelect && !enabled && aiProviderSelect.value === 'local') aiProviderSelect.value = 'openai';
-      applyProviderPreset(aiProviderSelect ? aiProviderSelect.value : 'openai', true);
+      if (aiProviderSelect && !enabled && aiProviderSelect.value === 'local') aiProviderSelect.value = 'builtin';
+      applyProviderPreset(aiProviderSelect ? aiProviderSelect.value : 'builtin', true);
       if (aiApiModelInput) {
         if (aiProviderSelect && aiProviderSelect.value === 'gemini') aiApiModelInput.setAttribute('list', 'geminiModelList');
         else aiApiModelInput.removeAttribute('list');
@@ -891,7 +892,7 @@
 
   function setGitUiDisabled(disabled) {
     gitBusy = disabled;
-    [gitRefreshBtn, gitFetchBtn, gitPullBtn, gitPushBtn, gitCommitBtn].forEach((btn) => {
+    [gitRefreshBtn, gitFetchBtn, gitPullBtn, gitPushBtn, gitDeleteMergedBtn, gitCommitBtn].forEach((btn) => {
       if (btn) btn.disabled = disabled;
     });
   }
@@ -1009,6 +1010,28 @@
     }
   }
 
+  async function cleanupMergedBranches() {
+    if (gitBusy) return;
+    const confirmed = window.confirm('Delete all local branches already merged into the current branch? (Excludes main/master/develop/current)');
+    if (!confirmed) return;
+    setGitUiDisabled(true);
+    try {
+      const resp = await fetch('/api/git/cleanup-merged', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Cleanup failed');
+      const deleted = Array.isArray(data.deleted) ? data.deleted : [];
+      const skipped = Array.isArray(data.skipped) ? data.skipped : [];
+      const detail = `${deleted.length} deleted${skipped.length ? `, ${skipped.length} skipped` : ''}`;
+      setGitStatus(`Merged branches cleaned (${detail})`);
+      await loadGitStatus(false);
+      await loadGitLog();
+    } catch (err) {
+      setGitStatus(err.message || 'Cleanup failed', true);
+    } finally {
+      setGitUiDisabled(false);
+    }
+  }
+
   async function commitChanges() {
     const msg = gitCommitMsg ? gitCommitMsg.value.trim() : '';
     if (!msg) {
@@ -1039,6 +1062,7 @@
   if (gitFetchBtn) gitFetchBtn.addEventListener('click', () => runGitAction('fetch'));
   if (gitPullBtn) gitPullBtn.addEventListener('click', () => runGitAction('pull'));
   if (gitPushBtn) gitPushBtn.addEventListener('click', () => runGitAction('push'));
+  if (gitDeleteMergedBtn) gitDeleteMergedBtn.addEventListener('click', () => cleanupMergedBranches());
   if (gitCommitBtn) gitCommitBtn.addEventListener('click', () => commitChanges());
 
   // ── Keyboard Shortcuts ─────────────────────────────────────
