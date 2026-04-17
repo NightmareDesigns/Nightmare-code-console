@@ -18,7 +18,7 @@ const tabbyUrl = process.env.AI_TABBY_URL || 'http://127.0.0.1:8080/v1/chat/comp
 const tabbyKey = process.env.AI_TABBY_KEY || '';
 const tabbyModel = process.env.AI_TABBY_MODEL || 'TabbyML/StarCoder2-15B';
 const envProvider = (process.env.AI_PROVIDER || '').toLowerCase();
-const defaultProviderFromEnv = envProvider || (geminiApiKey ? 'gemini' : '');
+const defaultProviderFromEnv = envProvider || (preferLocal ? 'local' : (geminiApiKey ? 'gemini' : ''));
 const fallbackProvider = defaultProviderFromEnv || ((process.env.AI_API_URL || process.env.AI_API_KEY) ? 'openai' : 'builtin');
 const DEFAULT_PROVIDER = (fallbackProvider || 'builtin').toLowerCase();
 const buildGeminiUrl = (modelName) => `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
