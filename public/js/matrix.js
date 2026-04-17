@@ -8,6 +8,7 @@
     'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン' +
     'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*(){}[]<>/\\|~`+=_-;:,.!?';
   const charArray = CHARS.split('');
+  const GLYPH_SIZE = 14;
 
   function boot() {
     const canvas = document.getElementById('matrixCanvas');
@@ -21,16 +22,20 @@
     let enabled = true;
     let userEnabled = true;
     let frameCount = 0;
-    let lastW = 0;
-    let lastH = 0;
+    let viewW = 0;
+    let viewH = 0;
+    let dpr = 1;
 
-    function resize() {
-      const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
+    function resize(force = false) {
+      const nextDpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
       const w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
       const h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-      if (w === lastW && h === lastH) return;
-      lastW = w;
-      lastH = h;
+      if (!force && w === viewW && h === viewH && nextDpr === dpr) return;
+
+      viewW = w;
+      viewH = h;
+      dpr = nextDpr;
+
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
       canvas.width = Math.max(1, Math.floor(w * dpr));
@@ -40,40 +45,43 @@
     }
 
     function initDrops() {
-      const cols = Math.max(1, Math.floor(canvas.width / 16));
-      drops = new Array(cols).fill(0).map(() => Math.floor(Math.random() * -canvas.height / 16));
+      const cols = Math.max(1, Math.floor(viewW / GLYPH_SIZE));
+      const startingRange = Math.max(1, Math.ceil(viewH / GLYPH_SIZE));
+      drops = new Array(cols).fill(0).map(() => Math.floor(Math.random() * -startingRange));
     }
 
     function tick() {
       frameCount++;
 
       if (enabled) {
-        if (canvas.width === 0 || canvas.height === 0) resize();
+        if (viewW === 0 || viewH === 0) resize(true);
         const skipRate = Math.max(1, 11 - speed);
         if (frameCount % skipRate === 0) {
-          ctx.fillStyle = 'rgba(10, 10, 15, 0.07)';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.font = '14px monospace';
+          ctx.fillStyle = 'rgba(8, 8, 12, 0.14)';
+          ctx.fillRect(0, 0, viewW, viewH);
+          ctx.font = `${GLYPH_SIZE}px 'Cascadia Code', 'Fira Code', 'Consolas', monospace`;
+          ctx.textBaseline = 'top';
           for (let i = 0; i < drops.length; i++) {
             const char = charArray[Math.floor(Math.random() * charArray.length)];
-            const x = i * 16;
-            const y = drops[i] * 16;
-            if (Math.random() > 0.95) {
-              ctx.fillStyle = '#ffffff';
-            } else if (drops[i] % 5 === 0) {
-              ctx.fillStyle = '#00aa2a';
+            const x = i * GLYPH_SIZE;
+            const y = drops[i] * GLYPH_SIZE;
+            const roll = Math.random();
+            if (roll > 0.96) {
+              ctx.fillStyle = '#e0ffe8';
+            } else if (drops[i] % 6 === 0) {
+              ctx.fillStyle = '#19ff4d';
             } else {
-              ctx.fillStyle = '#00ff41';
+              ctx.fillStyle = '#00c93a';
             }
             ctx.fillText(char, x, y);
-            if (y > canvas.height && Math.random() > 0.975) {
-              drops[i] = 0;
+            if (y > viewH && Math.random() > 0.97) {
+              drops[i] = Math.floor(Math.random() * -Math.ceil(viewH / GLYPH_SIZE));
             }
             drops[i]++;
           }
         }
       } else {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, viewW, viewH);
       }
 
       animId = requestAnimationFrame(tick);
@@ -81,9 +89,15 @@
 
     function setEnabled(val) {
       userEnabled = val;
-      enabled = val;
-      if (!val) ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (val && !animId) animId = requestAnimationFrame(tick);
+      if (!val) {
+        enabled = false;
+        ctx.clearRect(0, 0, viewW, viewH);
+        pause();
+      } else {
+        enabled = true;
+        resize(true);
+        resume();
+      }
     }
 
     function setSpeed(val) {
@@ -103,22 +117,22 @@
 
     function restart() {
       pause();
-      resize();
+      resize(true);
       resume();
     }
 
-    window.addEventListener('resize', resize);
-    window.addEventListener('orientationchange', () => setTimeout(resize, 150));
+    window.addEventListener('resize', () => resize(true));
+    window.addEventListener('orientationchange', () => setTimeout(() => resize(true), 150));
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         pause();
       } else {
         animId = null;
-        resize();
+        resize(true);
         resume();
       }
     });
-    resize();
+    resize(true);
     animId = requestAnimationFrame(tick);
 
     // Expose controls globally

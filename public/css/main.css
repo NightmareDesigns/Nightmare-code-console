@@ -59,19 +59,69 @@ html, body {
 .matrix-canvas {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: 6;
   pointer-events: none;
-  opacity: 0.18;
+  opacity: 0.22;
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 12px rgba(0, 255, 65, 0.25));
 }
 
 /* ── Blood Layer ──────────────────────────────────────────── */
 .blood-layer {
   position: fixed;
-  top: 0; left: 0; right: 0;
-  height: 0;
-  z-index: 1;
+  inset: 0;
+  z-index: 7;
   pointer-events: none;
   overflow: visible;
+  mix-blend-mode: screen;
+}
+
+/* ── Floating Logo ────────────────────────────────────────── */
+.logo-mark {
+  position: fixed;
+  right: 16px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: linear-gradient(120deg, rgba(20, 20, 26, 0.6), rgba(20, 8, 12, 0.6));
+  border: 1px solid rgba(204, 0, 0, 0.35);
+  box-shadow: 0 0 18px rgba(204, 0, 0, 0.2);
+  color: rgba(255, 255, 255, 0.75);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 700;
+  font-size: 12px;
+  z-index: 9;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  backdrop-filter: blur(4px);
+}
+
+.logo-mark-icon {
+  font-size: 18px;
+  filter: drop-shadow(0 0 8px rgba(204, 0, 0, 0.8));
+}
+
+.logo-mark-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.logo-mark-name {
+  background: linear-gradient(90deg, #ff3333, #cc0000, #ff6666);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.logo-mark-sub {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 1.2px;
 }
 
 /* ── App Shell ────────────────────────────────────────────── */
