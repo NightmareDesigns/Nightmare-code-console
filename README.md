@@ -102,6 +102,7 @@ Usage:
 - Optional: place a `.env` next to the EXE to override defaults (AI endpoint/model/port). Without it, the bundled defaults run in mock mode or local-first if you set them before building.
 - Gemini ready: drop a `.env` beside the EXE with `AI_PROVIDER=gemini`, `AI_GEMINI_API_KEY=<your_key>`, and optionally `AI_GEMINI_MODEL=gemini-1.5-flash` to run against Gemini without changing code.
 - In the browser, choose **Install this site as an app** to pin it like a native editor. Everything is cached for offline use.
+- To predownload and wire up the local Qwen 2.5 3B model on Windows, run: `powershell -ExecutionPolicy Bypass -File scripts/bootstrap-qwen.ps1` (installs Ollama if missing, pulls `qwen2.5-coder:3b`, writes `.env.local`).
 
 ### Windows install errors (EPERM / ENOENT)
 
