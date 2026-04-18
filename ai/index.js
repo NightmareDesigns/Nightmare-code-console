@@ -127,11 +127,12 @@ function resolveConfig(body = {}) {
 }
 
 // System prompt that gives the AI context about the Nightmare Code Console
-const SYSTEM_PROMPT = `You are NightmareAI, an advanced coding assistant built into the Nightmare Code Console — 
-a dark-themed, horror-inspired AI-powered code editor. You help developers write, debug, review, and 
-understand code across all programming languages. You are knowledgeable, precise, and slightly gothic in tone. 
-Always format code with proper markdown code blocks using the appropriate language identifier. 
-Keep explanations concise but thorough.`;
+const SYSTEM_PROMPT = `You are NightmareAI, an advanced coding assistant built into the Nightmare Code Console —
+a dark-themed, horror-inspired AI-powered code editor. You help developers write, debug, review, and
+understand code across all programming languages. You are knowledgeable, precise, and embrace a gothic aesthetic.
+Always format code with proper markdown code blocks using the appropriate language identifier.
+Provide clear explanations with actionable advice. When debugging, identify root causes and suggest fixes.
+When writing code, follow best practices and include inline comments for complex logic.`;
 
 // Mock responses for demo mode
 const MOCK_SNIPPETS = [
@@ -175,6 +176,260 @@ function chooseLanguage(context, promptText) {
   if (/rust/i.test(promptText)) return 'rust';
   if (/go\b/i.test(promptText)) return 'go';
   return 'javascript';
+}
+
+function buildIntelligentSnippet(lang, promptText = '', contextCode = '', mode = 'generate') {
+  const comment = (text) => {
+    if (lang === 'python' || lang === 'shell' || lang === 'bash') return `# ${text}`;
+    if (lang === 'rust') return `// ${text}`;
+    if (lang === 'go') return `// ${text}`;
+    return `// ${text}`;
+  };
+
+  const intent = promptText.slice(0, 60).replace(/\n/g, ' ');
+
+  // Analyze context code to provide smarter snippets
+  const hasImport = /import |require\(|from .* import/i.test(contextCode);
+  const hasClass = /class\s+\w+/i.test(contextCode);
+  const hasAsync = /async|await|Promise/i.test(contextCode);
+  const hasExport = /export |module\.exports/i.test(contextCode);
+
+  if (mode === 'debug') {
+    // Generate debugging helpers
+    switch (lang) {
+      case 'javascript':
+      case 'typescript':
+        return [
+          comment(`Debug helper for: ${intent}`),
+          'function debugLog(label, value) {',
+          '  console.log(`[DEBUG] ${label}:`, JSON.stringify(value, null, 2));',
+          '  return value; // Allow chaining',
+          '}',
+          '',
+          comment('Add try-catch for error handling'),
+          'try {',
+          '  const result = yourFunction(input);',
+          '  debugLog("Result", result);',
+          '} catch (error) {',
+          '  console.error("Error:", error.message);',
+          '  console.error("Stack:", error.stack);',
+          '}',
+        ].join('\n');
+      case 'python':
+        return [
+          comment(`Debug helper for: ${intent}`),
+          'import traceback',
+          'import json',
+          '',
+          'def debug_log(label, value):',
+          '    print(f"[DEBUG] {label}:", json.dumps(value, indent=2, default=str))',
+          '    return value',
+          '',
+          'try:',
+          '    result = your_function(input_data)',
+          '    debug_log("Result", result)',
+          'except Exception as e:',
+          '    print(f"Error: {e}")',
+          '    traceback.print_exc()',
+        ].join('\n');
+      default:
+        return buildBuiltinSnippet(lang, promptText);
+    }
+  } else if (mode === 'refactor') {
+    // Generate refactored code examples
+    switch (lang) {
+      case 'javascript':
+      case 'typescript':
+        return [
+          comment(`Refactored version - ${intent}`),
+          comment('Before: Large function with multiple responsibilities'),
+          comment('After: Split into smaller, focused functions'),
+          '',
+          'function validateInput(data) {',
+          '  if (!data || typeof data !== "object") {',
+          '    throw new Error("Invalid input: expected object");',
+          '  }',
+          '  return true;',
+          '}',
+          '',
+          'function processData(data) {',
+          '  return data',
+          '    .filter(item => item.active)',
+          '    .map(item => ({',
+          '      id: item.id,',
+          '      name: item.name.trim(),',
+          '      timestamp: Date.now()',
+          '    }));',
+          '}',
+          '',
+          comment('Main function - clean and readable'),
+          'function handleRequest(rawData) {',
+          '  validateInput(rawData);',
+          '  const processed = processData(rawData.items);',
+          '  return { success: true, data: processed };',
+          '}',
+        ].join('\n');
+      case 'python':
+        return [
+          comment(`Refactored version - ${intent}`),
+          'from typing import List, Dict, Any',
+          '',
+          'def validate_input(data: Dict[str, Any]) -> bool:',
+          '    """Validate input data structure."""',
+          '    if not isinstance(data, dict):',
+          '        raise ValueError("Invalid input: expected dictionary")',
+          '    return True',
+          '',
+          'def process_items(items: List[Dict]) -> List[Dict]:',
+          '    """Process and transform items."""',
+          '    return [',
+          '        {',
+          '            "id": item["id"],',
+          '            "name": item["name"].strip(),',
+          '            "active": item.get("active", False)',
+          '        }',
+          '        for item in items',
+          '        if item.get("active")',
+          '    ]',
+          '',
+          'def handle_request(raw_data: Dict[str, Any]) -> Dict[str, Any]:',
+          '    """Main request handler - clean and focused."""',
+          '    validate_input(raw_data)',
+          '    processed = process_items(raw_data.get("items", []))',
+          '    return {"success": True, "data": processed}',
+        ].join('\n');
+      default:
+        return buildBuiltinSnippet(lang, promptText);
+    }
+  }
+
+  // Default: intelligent code generation
+  switch (lang) {
+    case 'javascript':
+    case 'typescript':
+      const useAsync = /api|fetch|http|request|async|await/i.test(promptText);
+      const useArray = /array|list|filter|map|sort/i.test(promptText);
+
+      if (useAsync) {
+        return [
+          comment(`Async function for: ${intent}`),
+          'async function fetchData(url, options = {}) {',
+          '  try {',
+          '    const response = await fetch(url, {',
+          '      method: options.method || "GET",',
+          '      headers: {',
+          '        "Content-Type": "application/json",',
+          '        ...options.headers',
+          '      },',
+          '      ...options',
+          '    });',
+          '',
+          '    if (!response.ok) {',
+          '      throw new Error(`HTTP ${response.status}: ${response.statusText}`);',
+          '    }',
+          '',
+          '    const data = await response.json();',
+          '    return { success: true, data };',
+          '  } catch (error) {',
+          '    console.error("Fetch error:", error);',
+          '    return { success: false, error: error.message };',
+          '  }',
+          '}',
+          '',
+          comment('Usage'),
+          'const result = await fetchData("https://api.example.com/data");',
+          'if (result.success) console.log(result.data);',
+        ].join('\n');
+      } else if (useArray) {
+        return [
+          comment(`Array processing for: ${intent}`),
+          'function processArray(items) {',
+          '  if (!Array.isArray(items)) return [];',
+          '',
+          '  return items',
+          '    .filter(item => item != null && item.active)',
+          '    .map(item => ({',
+          '      id: item.id,',
+          '      name: item.name?.trim() || "Unknown",',
+          '      score: Number(item.score) || 0',
+          '    }))',
+          '    .sort((a, b) => b.score - a.score);',
+          '}',
+          '',
+          'const data = [',
+          '  { id: 1, name: "Item A", score: 95, active: true },',
+          '  { id: 2, name: "Item B", score: 87, active: true }',
+          '];',
+          'console.log(processArray(data));',
+        ].join('\n');
+      }
+      return buildBuiltinSnippet(lang, promptText);
+
+    case 'python':
+      const usePyAsync = /async|await|aio|asyncio/i.test(promptText);
+      const usePyData = /data|pandas|process|transform/i.test(promptText);
+
+      if (usePyAsync) {
+        return [
+          comment(`Async function for: ${intent}`),
+          'import asyncio',
+          'import aiohttp',
+          '',
+          'async def fetch_data(url: str, session: aiohttp.ClientSession):',
+          '    """Fetch data asynchronously."""',
+          '    try:',
+          '        async with session.get(url) as response:',
+          '            response.raise_for_status()',
+          '            data = await response.json()',
+          '            return {"success": True, "data": data}',
+          '    except Exception as e:',
+          '        return {"success": False, "error": str(e)}',
+          '',
+          'async def main():',
+          '    async with aiohttp.ClientSession() as session:',
+          '        result = await fetch_data("https://api.example.com", session)',
+          '        if result["success"]:',
+          '            print(result["data"])',
+          '',
+          'if __name__ == "__main__":',
+          '    asyncio.run(main())',
+        ].join('\n');
+      } else if (usePyData) {
+        return [
+          comment(`Data processing for: ${intent}`),
+          'from typing import List, Dict, Any',
+          '',
+          'def process_data(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:',
+          '    """Process and transform data items."""',
+          '    if not items:',
+          '        return []',
+          '',
+          '    result = []',
+          '    for item in items:',
+          '        if not item.get("active", False):',
+          '            continue',
+          '',
+          '        processed = {',
+          '            "id": item.get("id"),',
+          '            "name": item.get("name", "").strip(),',
+          '            "score": float(item.get("score", 0))',
+          '        }',
+          '        result.append(processed)',
+          '',
+          '    return sorted(result, key=lambda x: x["score"], reverse=True)',
+          '',
+          'data = [',
+          '    {"id": 1, "name": "Item A", "score": 95, "active": True},',
+          '    {"id": 2, "name": "Item B", "score": 87, "active": True}',
+          ']',
+          'print(process_data(data))',
+        ].join('\n');
+      }
+      return buildBuiltinSnippet(lang, promptText);
+
+    default:
+      return buildBuiltinSnippet(lang, promptText);
+  }
 }
 
 function buildBuiltinSnippet(lang, promptText = '') {
@@ -280,30 +535,113 @@ function buildBuiltinReply(messages, context, cfg) {
   const lastUser = [...messages].reverse().find((m) => m.role === 'user');
   const promptText = lastUser ? lastUser.content || '' : '';
   const lang = chooseLanguage(context, promptText);
-  const snippet = buildBuiltinSnippet(lang, promptText);
-  const steps = [
-    'Clarify the goal and inputs.',
-    'Sketch a tiny plan with edge cases.',
-    'Implement iteratively; log or print key steps.',
-    'Add a quick self-check before shipping.',
-  ];
-  const ctxSummary = context && context.code
-    ? `Context: ${context.filename || 'untitled'} (${context.language || 'plaintext'}, ${context.code.split('\n').length} lines)`
-    : 'No editor context shared — toggle "Include editor context" for deeper help.';
 
-  return [
-    `🩸 Nightmare MiniCoder (offline) — ${cfg.model}`,
-    `Mode: BUILT-IN · Provider: ${cfg.provider}`,
-    ctxSummary,
-    '',
-    'Working steps:',
-    ...steps.map((s, i) => `${i + 1}. ${s}`),
-    '',
-    'Starter snippet:',
-    '```' + lang + '\n' + snippet + '\n```',
-    '',
-    'Need richer answers? Provide more context or switch to a cloud/local provider in Settings → AI.',
-  ].join('\n');
+  // Analyze the prompt to understand the request type
+  const isDebugging = /debug|error|fix|bug|wrong|issue|problem|crash|fail/i.test(promptText);
+  const isExplaining = /what|how|why|explain|describe|understand|means|does/i.test(promptText);
+  const isRefactoring = /refactor|improve|optimize|clean|better|rewrite/i.test(promptText);
+  const isReviewing = /review|check|look at|feedback|critique/i.test(promptText);
+  const isGenerating = !isDebugging && !isExplaining && !isRefactoring && !isReviewing;
+
+  const ctxCode = context && context.code ? context.code : '';
+  const ctxFileName = context && context.filename ? context.filename : 'untitled';
+  const ctxLang = context && context.language ? context.language : 'plaintext';
+  const hasContext = ctxCode.length > 0;
+
+  let response = [];
+  response.push(`🩸 **Nightmare MiniCoder** (Built-in Offline AI)`);
+  response.push(`Model: ${cfg.model} · Mode: ${cfg.mode}`);
+
+  if (hasContext) {
+    response.push(`\nAnalyzing: \`${ctxFileName}\` (${ctxLang}, ${ctxCode.split('\n').length} lines)`);
+  }
+
+  // Generate intelligent response based on request type
+  if (isDebugging && hasContext) {
+    response.push('\n### 🔍 Debug Analysis\n');
+    response.push('**Common issues to check:**');
+    response.push('1. Variable scope and hoisting issues');
+    response.push('2. Async/await or Promise handling');
+    response.push('3. Null/undefined checks and type errors');
+    response.push('4. Off-by-one errors in loops');
+    response.push('5. Incorrect API usage or missing imports');
+
+    const snippet = buildIntelligentSnippet(lang, promptText, ctxCode, 'debug');
+    response.push('\n**Suggested fix:**');
+    response.push('```' + lang);
+    response.push(snippet);
+    response.push('```');
+  } else if (isExplaining && hasContext) {
+    response.push('\n### 📚 Code Explanation\n');
+    response.push('**What this code does:**');
+    const lines = ctxCode.split('\n').slice(0, 10);
+    const hasFunc = /function|const.*=>|def |class /i.test(ctxCode);
+    const hasLoop = /for|while|forEach|map|filter/i.test(ctxCode);
+    const hasAsync = /async|await|Promise|then\(/i.test(ctxCode);
+
+    if (hasFunc) response.push('- Defines functions/methods to encapsulate logic');
+    if (hasLoop) response.push('- Uses iteration to process collections or repeat operations');
+    if (hasAsync) response.push('- Handles asynchronous operations (API calls, file I/O, etc.)');
+    response.push('- Implements business logic for your application');
+
+    response.push('\n**Key concepts:**');
+    response.push(`- Language: ${ctxLang.toUpperCase()}`);
+    response.push(`- Paradigm: ${hasFunc ? 'Functional/OOP' : 'Procedural'}`);
+    response.push(`- Complexity: ${ctxCode.split('\n').length > 50 ? 'Medium-High' : 'Low-Medium'}`);
+  } else if (isRefactoring && hasContext) {
+    response.push('\n### ⚡ Refactoring Suggestions\n');
+    response.push('**Improvements to consider:**');
+    response.push('1. **Extract functions** - Break down large functions into smaller, reusable units');
+    response.push('2. **Remove duplication** - Use loops, functions, or abstractions for repeated code');
+    response.push('3. **Improve naming** - Use descriptive names that reveal intent');
+    response.push('4. **Add error handling** - Guard against edge cases and invalid input');
+    response.push('5. **Optimize performance** - Cache results, reduce complexity, minimize allocations');
+
+    const snippet = buildIntelligentSnippet(lang, promptText, ctxCode, 'refactor');
+    response.push('\n**Refactored example:**');
+    response.push('```' + lang);
+    response.push(snippet);
+    response.push('```');
+  } else if (isReviewing && hasContext) {
+    response.push('\n### 👁️ Code Review\n');
+    response.push('**Checklist:**');
+    response.push('- ✓ Code follows language conventions and style guides');
+    response.push('- ✓ Functions are small, focused, and well-named');
+    response.push('- ✓ Error handling is present for failure cases');
+    response.push('- ✓ No obvious security vulnerabilities');
+    response.push('- ✓ Performance considerations are appropriate');
+
+    response.push('\n**Recommendations:**');
+    response.push('- Add inline comments for complex algorithms');
+    response.push('- Include unit tests for critical functions');
+    response.push('- Consider edge cases and validate inputs');
+    response.push('- Document public APIs and interfaces');
+  } else {
+    // Code generation
+    response.push(`\n### 💡 Code Generation\n`);
+    response.push('**Request:** ' + promptText.slice(0, 120) + (promptText.length > 120 ? '...' : ''));
+
+    const snippet = buildIntelligentSnippet(lang, promptText, ctxCode, 'generate');
+    response.push('\n**Generated solution:**');
+    response.push('```' + lang);
+    response.push(snippet);
+    response.push('```');
+
+    response.push('\n**Implementation notes:**');
+    response.push('- Follow the pattern above and adapt to your specific needs');
+    response.push('- Test edge cases thoroughly');
+    response.push('- Add error handling for production use');
+    response.push('- Consider performance for large datasets');
+  }
+
+  if (!hasContext && isGenerating) {
+    response.push('\n💡 **Tip:** Enable "Include editor context" to get more specific help!');
+  }
+
+  response.push('\n---');
+  response.push('*For advanced AI capabilities, configure a cloud provider (OpenAI, Gemini) or local model (Ollama) in Settings → AI*');
+
+  return response.join('\n');
 }
 
 router.post('/chat', async (req, res) => {
