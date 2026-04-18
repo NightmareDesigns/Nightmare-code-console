@@ -61,7 +61,7 @@ html, body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.18;
+  opacity: 0.25;
 }
 
 /* ── Blood Layer ──────────────────────────────────────────── */
@@ -83,6 +83,7 @@ html, body {
   width: 100%;
   height: 100vh;
   background: transparent;
+  /* Allow matrix to show through all panels */
 }
 
 /* ── Title Bar ────────────────────────────────────────────── */
@@ -91,7 +92,9 @@ html, body {
   align-items: center;
   justify-content: space-between;
   height: var(--title-bar-h);
-  background: var(--bg-secondary);
+  background: rgba(14, 14, 20, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
   padding: 0 12px;
   flex-shrink: 0;
@@ -161,7 +164,9 @@ html, body {
 /* ── Activity Bar ─────────────────────────────────────────── */
 .activity-bar {
   width: var(--activity-bar-w);
-  background: var(--bg-secondary);
+  background: rgba(14, 14, 20, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -196,7 +201,9 @@ html, body {
 /* ── Sidebar ──────────────────────────────────────────────── */
 .sidebar {
   width: var(--sidebar-w);
-  background: var(--bg-tertiary);
+  background: rgba(19, 19, 26, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -487,7 +494,9 @@ html, body {
   display: flex;
   align-items: center;
   height: var(--tab-bar-h);
-  background: var(--bg-secondary);
+  background: rgba(14, 14, 20, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
   overflow-y: hidden;
@@ -507,7 +516,7 @@ html, body {
   border: none;
   border-right: 1px solid var(--border);
   border-bottom: 2px solid transparent;
-  background: var(--bg-secondary);
+  background: rgba(14, 14, 20, 0.6);
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 12px;
@@ -518,9 +527,11 @@ html, body {
   transition: background var(--transition);
   flex-shrink: 0;
 }
-.tab:hover { background: var(--bg-hover); color: var(--text-primary); }
+.tab:hover { background: rgba(26, 26, 36, 0.8); color: var(--text-primary); }
 .tab.active {
-  background: var(--bg-primary);
+  background: rgba(10, 10, 15, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--text-primary);
   border-bottom-color: var(--accent-red);
 }
@@ -561,7 +572,9 @@ html, body {
 /* ── Terminal Panel ───────────────────────────────────────── */
 .terminal-panel {
   height: var(--terminal-h);
-  background: var(--bg-secondary);
+  background: rgba(14, 14, 20, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -632,7 +645,9 @@ html, body {
 /* ── AI Panel ─────────────────────────────────────────────── */
 .ai-panel {
   width: var(--ai-panel-w);
-  background: var(--bg-tertiary);
+  background: rgba(19, 19, 26, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
