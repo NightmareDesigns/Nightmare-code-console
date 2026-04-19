@@ -23,14 +23,28 @@
     let frameCount = 0;
     let lastW = 0;
     let lastH = 0;
+    let lastDpr = 0;
 
     function resize() {
       const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
-      const w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-      const h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-      if (w === lastW && h === lastH) return;
+      const w = Math.max(
+        1,
+        document.documentElement.clientWidth,
+        window.innerWidth || 0,
+        canvas.clientWidth || 0,
+        (window.screen && window.screen.width) || 0
+      );
+      const h = Math.max(
+        1,
+        document.documentElement.clientHeight,
+        window.innerHeight || 0,
+        canvas.clientHeight || 0,
+        (window.screen && window.screen.height) || 0
+      );
+      if (w === lastW && h === lastH && dpr === lastDpr) return;
       lastW = w;
       lastH = h;
+      lastDpr = dpr;
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
       canvas.width = Math.max(1, Math.floor(w * dpr));
