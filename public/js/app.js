@@ -284,15 +284,16 @@
         return; // async, don't write prompt yet
       }
       case 'cat': {
+        const CAT_LINE_LIMIT = 100;
         const catPath = args[0];
         if (!catPath) { term.writeln('\x1b[31mUsage: cat <path>\x1b[0m'); break; }
         fetch(`/api/ai/tools/file?path=${encodeURIComponent(catPath)}`)
           .then((r) => r.json())
           .then((data) => {
             if (data.error) { term.writeln(`\x1b[31m${data.error}\x1b[0m`); return; }
-            const lines = (data.content || '').split('\n').slice(0, 100);
+            const lines = (data.content || '').split('\n').slice(0, CAT_LINE_LIMIT);
             lines.forEach((line) => term.writeln(line));
-            if ((data.lines || 0) > 100) term.writeln('\x1b[2m... (truncated)\x1b[0m');
+            if ((data.lines || 0) > CAT_LINE_LIMIT) term.writeln('\x1b[2m... (truncated)\x1b[0m');
             term.write('\x1b[32m$ \x1b[0m');
           })
           .catch((err) => { term.writeln(`\x1b[31m${err.message}\x1b[0m`); term.write('\x1b[32m$ \x1b[0m'); });
