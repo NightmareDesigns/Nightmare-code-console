@@ -10,7 +10,7 @@ const localUrl = process.env.AI_LOCAL_URL || 'http://127.0.0.1:11434/v1/chat/com
 const localModel = process.env.AI_LOCAL_MODEL || 'qwen2.5-coder:3b';
 const localApiKey = process.env.AI_LOCAL_API_KEY || '';
 const geminiApiKey = process.env.AI_GEMINI_API_KEY || '';
-const geminiModel = process.env.AI_GEMINI_MODEL || 'gemini-3.1-flash';
+const geminiModel = process.env.AI_GEMINI_MODEL || 'gemini-2.5-flash';
 const copilotUrl = process.env.AI_COPILOT_URL || 'https://api.githubcopilot.com/chat/completions';
 const copilotKey = process.env.AI_COPILOT_KEY || '';
 const copilotModel = process.env.AI_COPILOT_MODEL || 'gpt-4o';
@@ -111,7 +111,7 @@ function resolveConfig(body = {}) {
     mockMode = !apiKey && !isLocalEndpoint;
   }
 
-  const mode = mockMode ? 'MOCK' : (isLocalEndpoint ? 'LOCAL' : provider.toUpperCase());
+  const mode = mockMode ? 'OFFLINE' : (isLocalEndpoint ? 'LOCAL' : provider.toUpperCase());
 
   return {
     apiUrl,
@@ -150,18 +150,29 @@ function buildMockReply(messages, context, cfg) {
     ? `I also saw ${context.filename || 'your file'} (${context.language || 'plaintext'}) with ${context.code.split('\n').length} lines.`
     : 'Share code to get more specific help.';
 
+  const providerLabel = cfg.provider.toUpperCase();
+  const keyHint = cfg.provider === 'gemini'
+    ? 'Add your **Google AI Studio** key in **Settings → AI API Key** and ensure the Gemini provider is selected.'
+    : cfg.provider === 'copilot'
+      ? 'Add your **GitHub Copilot** token in **Settings → AI API Key**.'
+      : cfg.provider === 'local'
+        ? 'Make sure your local AI server (Ollama/LM Studio) is running and the URL is correct in **Settings → Local AI**.'
+        : 'Add an API key in **Settings → AI API Key** to enable live responses.';
+
   return [
-    `Running in mock mode (${cfg.mode}). Here's a quick suggestion for "${prompt.slice(0, 80)}"...`,
+    `⚠️ **${providerLabel} is not configured** — running in offline preview mode.`,
     '',
-    `- Provider: ${cfg.provider.toUpperCase()} (mock)`,
-    `- Model: ${cfg.model}`,
-    `- Endpoint: ${cfg.apiUrl || 'n/a'}`,
-    `- Tip: add an API key in Settings → AI to enable live responses.`,
+    keyHint,
+    '',
+    `---`,
+    `**Your question:** "${prompt.slice(0, 80)}${prompt.length > 80 ? '…' : ''}"`,
     '',
     ctxSummary,
     '',
-    `Example (${snippet.hint}):`,
+    `**Preview example** (${snippet.hint}):`,
     '```' + snippet.lang + '\n' + snippet.code + '\n```',
+    '',
+    `*Switch to **Built-in (offline)** in Settings → Provider for instant responses without an API key.*`,
   ].join('\n');
 }
 
@@ -722,7 +733,13 @@ router.post('/chat', async (req, res) => {
       if (!response.ok) {
         const errText = await response.text();
         console.error('Gemini API error:', response.status, errText);
-        return res.status(502).json({ error: `Gemini API error: ${response.status}` });
+        let errDetail = '';
+        try {
+          const errJson = JSON.parse(errText);
+          errDetail = (errJson.error && (errJson.error.message || errJson.error.status)) || '';
+        } catch { /* ignore parse errors */ }
+        const errMsg = errDetail || errText.slice(0, 300) || `HTTP ${response.status}`;
+        return res.status(502).json({ error: `Gemini error: ${errMsg}` });
       }
 
       const data = await response.json();
@@ -761,7 +778,14 @@ router.post('/chat', async (req, res) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error('AI API error:', response.status, errText);
-      return res.status(502).json({ error: `AI API error: ${response.status}` });
+      let errDetail = '';
+      try {
+        const errJson = JSON.parse(errText);
+        errDetail = (errJson.error && (errJson.error.message || errJson.error.code)) ||
+                    (typeof errJson.error === 'string' ? errJson.error : '') || '';
+      } catch { /* ignore parse errors */ }
+      const errMsg = errDetail || errText.slice(0, 300) || `HTTP ${response.status}`;
+      return res.status(502).json({ error: `AI API error: ${errMsg}` });
     }
 
     const data = await response.json();

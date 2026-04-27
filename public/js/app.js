@@ -76,7 +76,7 @@
 
   const defaultOpenAiUrl = 'https://api.openai.com/v1/chat/completions';
   const defaultOpenAiModel = 'gpt-4o';
-  const defaultGeminiModel = 'gemini-3.1-flash';
+  const defaultGeminiModel = 'gemini-2.5-flash';
   const defaultGeminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${defaultGeminiModel}:generateContent`;
   const defaultCopilotUrl = 'https://api.githubcopilot.com/chat/completions';
   const defaultCopilotModel = 'gpt-4o';
@@ -534,7 +534,8 @@
         }),
       });
       const data = await resp.json();
-      const label = data.mode || (data.mockMode ? 'MOCK' : data.isLocalEndpoint ? 'LOCAL' : 'LIVE');
+      const rawMode = data.mode || (data.mockMode ? 'OFFLINE' : data.isLocalEndpoint ? 'LOCAL' : 'LIVE');
+      const label = rawMode === 'MOCK' ? 'OFFLINE' : rawMode;
       setAiBadge(label, !data.mockMode, data.apiUrl || '');
       if (showStatus) {
         const detail = data.apiUrl ? `(${data.apiUrl})` : '';
@@ -546,6 +547,19 @@
   }
 
   async function loadAiSettingsFromStorage() {
+    // Migrate stale/non-existent Gemini model names stored from older versions
+    const GEMINI_MODEL_REMAP = { 'gemini-3.1-flash': 'gemini-2.5-flash', 'gemini-3.1-pro': 'gemini-2.5-pro' };
+    const savedModel = localStorage.getItem('nm-api-model');
+    if (savedModel && GEMINI_MODEL_REMAP[savedModel]) {
+      const remapped = GEMINI_MODEL_REMAP[savedModel];
+      localStorage.setItem('nm-api-model', remapped);
+      // Also fix the saved URL if it pointed to the wrong Gemini model
+      const savedUrl = localStorage.getItem('nm-api-url') || '';
+      if (savedUrl.includes(savedModel)) {
+        localStorage.setItem('nm-api-url', savedUrl.replace(savedModel, remapped));
+      }
+    }
+
     if (aiApiKeyInput) {
       const saved = localStorage.getItem('nm-api-key');
       if (saved) aiApiKeyInput.value = saved;
@@ -571,7 +585,7 @@
       if (aiProviderSelect && !aiProviderSelect.value) aiProviderSelect.value = cfg.provider || 'builtin';
       const label = cfg.apiConfigured
         ? (cfg.provider === 'builtin' ? 'BUILT-IN' : (cfg.isLocalEndpoint ? 'LOCAL' : (cfg.model || 'LIVE')))
-        : 'MOCK';
+        : 'OFFLINE';
       setAiBadge(label, cfg.apiConfigured, cfg.apiUrl || '');
       applyProviderPreset(aiProviderSelect ? aiProviderSelect.value : 'builtin', false);
     } catch {
