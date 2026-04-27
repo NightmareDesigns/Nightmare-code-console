@@ -253,6 +253,17 @@ console.log("Nightmare Code Console — Initialized 🩸");
     return editor ? editor.getValue() : '';
   }
 
+  function setContent(text) {
+    if (!editor) return;
+    editor.setValue(text || '');
+    const tab = getTab(activeTabId);
+    if (tab) {
+      tab.content = text || '';
+      tab.modified = true;
+      updateTabEl(tab.id);
+    }
+  }
+
   function getCurrentLanguage() {
     const tab = getTab(activeTabId);
     return tab ? tab.language : 'plaintext';
@@ -407,6 +418,7 @@ console.log("Nightmare Code Console — Initialized 🩸");
     closeTab,
     setActiveTab,
     getCurrentContent,
+    setContent,
     getCurrentLanguage,
     getCurrentFilename,
     setLanguage,

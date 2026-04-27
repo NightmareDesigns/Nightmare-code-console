@@ -782,6 +782,93 @@ html, body {
 }
 .ai-bubble a { color: var(--accent-blue); }
 
+/* ── Code block action buttons ────────────────────────────── */
+.code-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 4px 0 2px;
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+}
+
+.code-action-btn {
+  padding: 2px 8px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.code-action-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+/* ── Gemini Tools Bar ─────────────────────────────────────── */
+.gemini-tools-bar {
+  display: none;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  background: rgba(13, 6, 30, 0.85);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.gt-btn {
+  flex: 1;
+  min-width: 70px;
+  padding: 4px 6px;
+  font-size: 11px;
+  border: 1px solid #3a1a5a;
+  border-radius: var(--radius);
+  background: #150c25;
+  color: #c080ff;
+  cursor: pointer;
+  text-align: center;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+  white-space: nowrap;
+}
+.gt-btn:hover {
+  background: #1e1038;
+  border-color: #7b00ff;
+  color: #e0a0ff;
+}
+.gt-btn:active { transform: scale(0.97); }
+
+/* ── AI Tool notice (file created, build result, etc.) ────── */
+.ai-tool-notice {
+  margin: 4px 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  line-height: 1.5;
+  border-left: 3px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+.ai-tool-notice.success {
+  border-left-color: var(--accent-green);
+  color: var(--text-primary);
+}
+.ai-tool-notice.warn {
+  border-left-color: #ffd080;
+  color: #ffd080;
+}
+.ai-tool-notice p { margin: 0; }
+.ai-tool-notice code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--bg-primary);
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: var(--accent-green);
+}
+
 .ai-thinking {
   display: flex;
   gap: 4px;

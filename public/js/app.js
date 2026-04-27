@@ -249,12 +249,14 @@
     switch (command) {
       case 'help':
         term.writeln('\x1b[33mAvailable commands:\x1b[0m');
-        term.writeln('  help       — show this help');
-        term.writeln('  clear      — clear terminal');
-        term.writeln('  echo <msg> — echo a message');
-        term.writeln('  ls         — list virtual files');
-        term.writeln('  version    — show version');
-        term.writeln('  ai <msg>   — quick AI query');
+        term.writeln('  help           — show this help');
+        term.writeln('  clear          — clear terminal');
+        term.writeln('  echo <msg>     — echo a message');
+        term.writeln('  ls [path]      — list project files');
+        term.writeln('  cat <path>     — read a project file');
+        term.writeln('  build [script] — run npm script (build/test/install/lint)');
+        term.writeln('  version        — show version');
+        term.writeln('  ai <msg>       — quick AI query');
         break;
       case 'clear':
         term.clear();
@@ -265,9 +267,57 @@
       case 'version':
         term.writeln('\x1b[32mNightmare Code Console v1.0.0\x1b[0m');
         break;
-      case 'ls':
-        term.writeln('\x1b[34muntitled\x1b[0m  (virtual file)');
-        break;
+      case 'ls': {
+        const lsPath = args[0] || '';
+        const lsUrl = lsPath ? `/api/ai/tools/files?path=${encodeURIComponent(lsPath)}` : '/api/ai/tools/files';
+        fetch(lsUrl)
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.error) { term.writeln(`\x1b[31m${data.error}\x1b[0m`); return; }
+            (data.items || []).forEach((item) => {
+              const color = item.type === 'directory' ? '\x1b[34m' : '\x1b[0m';
+              term.writeln(`${color}${item.name}\x1b[0m${item.type === 'directory' ? '/' : ''}`);
+            });
+            term.write('\x1b[32m$ \x1b[0m');
+          })
+          .catch((err) => { term.writeln(`\x1b[31m${err.message}\x1b[0m`); term.write('\x1b[32m$ \x1b[0m'); });
+        return; // async, don't write prompt yet
+      }
+      case 'cat': {
+        const catPath = args[0];
+        if (!catPath) { term.writeln('\x1b[31mUsage: cat <path>\x1b[0m'); break; }
+        fetch(`/api/ai/tools/file?path=${encodeURIComponent(catPath)}`)
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.error) { term.writeln(`\x1b[31m${data.error}\x1b[0m`); return; }
+            const lines = (data.content || '').split('\n').slice(0, 100);
+            lines.forEach((line) => term.writeln(line));
+            if ((data.lines || 0) > 100) term.writeln('\x1b[2m... (truncated)\x1b[0m');
+            term.write('\x1b[32m$ \x1b[0m');
+          })
+          .catch((err) => { term.writeln(`\x1b[31m${err.message}\x1b[0m`); term.write('\x1b[32m$ \x1b[0m'); });
+        return;
+      }
+      case 'build': {
+        const buildScript = args[0] || 'build';
+        term.writeln(`\x1b[33m▶ Running: npm run ${buildScript}\x1b[0m`);
+        fetch('/api/ai/tools/build', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: buildScript }),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.error && !data.stdout) { term.writeln(`\x1b[31m${data.error}\x1b[0m`); return; }
+            const output = [data.stdout, data.stderr].filter(Boolean).join('\n');
+            if (output) output.split('\n').forEach((line) => term.writeln(line));
+            const icon = data.success ? '✅' : '⚠️';
+            term.writeln(`\x1b[${data.success ? '32' : '33'}m${icon} ${data.success ? 'Build succeeded' : 'Build finished with errors'}\x1b[0m`);
+            term.write('\x1b[32m$ \x1b[0m');
+          })
+          .catch((err) => { term.writeln(`\x1b[31mBuild error: ${err.message}\x1b[0m`); term.write('\x1b[32m$ \x1b[0m'); });
+        return;
+      }
       case 'ai':
         if (args.length > 0 && window.NightmareAI) {
           const aiInput = document.getElementById('aiInput');
@@ -619,6 +669,11 @@
         else aiApiModelInput.removeAttribute('list');
       }
       applyAiSettings();
+      // Notify AI module so Gemini tools bar updates
+      document.dispatchEvent(new CustomEvent('nm-provider-changed', { detail: aiProviderSelect.value }));
+      if (window.NightmareAI && window.NightmareAI.updateGeminiToolsVisibility) {
+        window.NightmareAI.updateGeminiToolsVisibility(aiProviderSelect.value);
+      }
     });
   }
 
