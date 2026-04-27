@@ -183,14 +183,14 @@
       createBtn.textContent = '📄 Create File';
       createBtn.title = 'Save this code as a new file in the project';
       createBtn.addEventListener('click', async () => {
-        const fileName = prompt('Save as file path (e.g. src/utils/helper.js):', 'untitled.js');
-        if (!fileName) return;
+        const filePath = prompt('Save as file path (e.g. src/utils/helper.js):', 'untitled.js');
+        if (!filePath) return;
         const text = code.innerText || code.textContent;
         try {
           const resp = await fetch('/api/ai/tools/file', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: fileName, content: text }),
+            body: JSON.stringify({ path: filePath, content: text }),
           });
           const data = await resp.json();
           if (data.success) {
@@ -401,7 +401,7 @@
   }
 
   async function geminiBuild() {
-    const cmd = prompt('npm script to run (build / install / test / lint / dev):', 'build');
+    const cmd = prompt('npm script to run (build / install / test / lint / dev / start):', 'build');
     if (!cmd) return;
 
     appendMessage('user', `🔨 Running build: \`npm run ${cmd}\``);
