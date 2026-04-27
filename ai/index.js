@@ -146,11 +146,11 @@ const GEMINI_TOOLS = [{
     },
     {
       name: 'run_build',
-      description: "Run a project npm script such as 'build', 'install', 'test', 'dev', or 'lint'.",
+      description: "Run a project npm script such as 'build', 'install', 'test', 'dev', 'lint', or 'start'.",
       parameters: {
         type: 'OBJECT',
         properties: {
-          command: { type: 'STRING', description: "npm script name to run: 'build', 'install', 'test', 'dev', 'lint'." },
+          command: { type: 'STRING', description: "npm script name to run: 'build', 'install', 'test', 'dev', 'lint', 'start'." },
         },
       },
     },
@@ -866,6 +866,11 @@ router.post('/chat', async (req, res) => {
         return res.status(400).json({ error: 'Invalid Gemini API URL — must point to generativelanguage.googleapis.com over HTTPS' });
       }
 
+      // Reconstruct the Gemini URL from the validated model name to avoid using the user-provided URL directly
+      // Model name is sanitized to only allow safe characters (alphanumeric, hyphen, dot, underscore)
+      const safeModel = (cfg.model || 'gemini-2.5-flash').replace(/[^a-zA-Z0-9\-_.]/g, '');
+      const safeGeminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${safeModel}:generateContent`;
+
       const systemText = apiMessages.filter((m) => m.role === 'system').map((m) => m.content).join('\n\n');
       const userMessages = apiMessages.filter((m) => m.role !== 'system');
       let contents = userMessages.map((m, idx) => {
@@ -881,7 +886,7 @@ router.post('/chat', async (req, res) => {
       const collectedToolActions = [];
 
       for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
-        const geminiUrl = `${cfg.apiUrl}?key=${encodeURIComponent(cfg.apiKey)}`;
+        const geminiUrl = `${safeGeminiUrl}?key=${encodeURIComponent(cfg.apiKey)}`;
         const response = await fetch(geminiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
