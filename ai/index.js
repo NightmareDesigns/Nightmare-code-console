@@ -2,6 +2,135 @@
 
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
+const { execFile } = require('child_process');
+
+// ── Gemini Admin Tool helpers ──────────────────────────────
+
+function isPathInsideBase(baseDir, targetPath) {
+  const resolvedBase = fs.realpathSync(baseDir);
+  let resolvedTarget;
+  try {
+    resolvedTarget = fs.realpathSync(targetPath);
+  } catch {
+    resolvedTarget = path.resolve(targetPath);
+  }
+  const rel = path.relative(resolvedBase, resolvedTarget);
+  return !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
+function toolListFiles(dirPath) {
+  const cwd = process.cwd();
+  const target = path.resolve(dirPath || cwd);
+  if (!isPathInsideBase(cwd, target)) return { error: 'Access denied' };
+  try {
+    const entries = fs.readdirSync(target, { withFileTypes: true });
+    return {
+      path: target,
+      items: entries.map((e) => ({
+        name: e.name,
+        type: e.isDirectory() ? 'directory' : 'file',
+        path: path.relative(cwd, path.join(target, e.name)),
+      })),
+    };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function toolReadFile(filePath) {
+  const cwd = process.cwd();
+  const target = path.resolve(filePath);
+  if (!isPathInsideBase(cwd, target)) return { error: 'Access denied' };
+  try {
+    const content = fs.readFileSync(target, 'utf8');
+    return { path: path.relative(cwd, target), content: content.slice(0, 16000), lines: content.split('\n').length };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function toolCreateFile(filePath, content) {
+  const cwd = process.cwd();
+  const target = path.resolve(filePath);
+  if (!isPathInsideBase(cwd, target)) return { error: 'Access denied' };
+  try {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, content || '', 'utf8');
+    return { success: true, path: path.relative(cwd, target) };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+const ALLOWED_BUILD_SCRIPTS = ['build', 'install', 'test', 'dev', 'lint', 'start'];
+
+function toolRunBuild(command) {
+  const raw = (command || 'build').toLowerCase().trim().replace(/^npm\s+(run\s+)?/, '');
+  const cmd = ALLOWED_BUILD_SCRIPTS.includes(raw) ? raw : null;
+  if (!cmd) {
+    return Promise.resolve({ error: `Command '${raw}' not allowed. Allowed: ${ALLOWED_BUILD_SCRIPTS.join(', ')}` });
+  }
+  return new Promise((resolve) => {
+    execFile('npm', ['run', cmd], { cwd: process.cwd(), timeout: 120000 }, (err, stdout, stderr) => {
+      if (err && !stdout && !stderr) {
+        resolve({ success: false, error: err.message });
+      } else {
+        resolve({ success: !err, stdout: (stdout || '').slice(0, 8000), stderr: (stderr || '').slice(0, 2000) });
+      }
+    });
+  });
+}
+
+// Gemini function declarations (tool definitions)
+const GEMINI_TOOLS = [{
+  functionDeclarations: [
+    {
+      name: 'list_files',
+      description: 'List files and directories inside the Nightmare Code Console project workspace.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          path: { type: 'STRING', description: 'Directory path to list (relative to project root; defaults to project root).' },
+        },
+      },
+    },
+    {
+      name: 'read_file',
+      description: 'Read the full contents of a file inside the project workspace.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          path: { type: 'STRING', description: 'Relative or absolute path to the file to read.' },
+        },
+        required: ['path'],
+      },
+    },
+    {
+      name: 'create_file',
+      description: 'Create a new code file (or overwrite an existing one) with the given content inside the project workspace.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          path: { type: 'STRING', description: 'Relative path of the file to create, e.g. src/utils/helper.js' },
+          content: { type: 'STRING', description: 'Full file content to write.' },
+        },
+        required: ['path', 'content'],
+      },
+    },
+    {
+      name: 'run_build',
+      description: "Run a project npm script such as 'build', 'install', 'test', 'dev', or 'lint'.",
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          command: { type: 'STRING', description: "npm script name to run: 'build', 'install', 'test', 'dev', 'lint'." },
+        },
+      },
+    },
+  ],
+}];
 
 const DEFAULT_AI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const envMockFlag = process.env.AI_MOCK_MODE === 'true';
@@ -127,12 +256,9 @@ function resolveConfig(body = {}) {
 }
 
 // System prompt that gives the AI context about the Nightmare Code Console
-const SYSTEM_PROMPT = `You are NightmareAI, an advanced coding assistant built into the Nightmare Code Console —
-a dark-themed, horror-inspired AI-powered code editor. You help developers write, debug, review, and
-understand code across all programming languages. You are knowledgeable, precise, and embrace a gothic aesthetic.
-Always format code with proper markdown code blocks using the appropriate language identifier.
-Provide clear explanations with actionable advice. When debugging, identify root causes and suggest fixes.
-When writing code, follow best practices and include inline comments for complex logic.`;
+const SYSTEM_PROMPT = `You are NightmareAI, an advanced coding assistant built into the Nightmare Code Console — a dark-themed, horror-inspired AI-powered code editor. You help developers write, debug, review, and understand code across all programming languages. You are knowledgeable, precise, and embrace a gothic aesthetic. Always format code with proper markdown code blocks using the appropriate language identifier. Provide clear explanations with actionable advice. When debugging, identify root causes and suggest fixes. When writing code, follow best practices and include inline comments for complex logic.
+
+When using the Gemini provider you have access to powerful workspace tools: list_files(path) to browse the project file tree, read_file(path) to read any project file, create_file(path, content) to create new code pages/files, and run_build(command) to trigger npm scripts. Use these tools proactively: when asked to create a file always call create_file; when asked to build always call run_build; when asked to analyze the project use list_files then read_file on relevant files.`;
 
 // Mock responses for demo mode
 const MOCK_SNIPPETS = [
@@ -712,52 +838,99 @@ router.post('/chat', async (req, res) => {
     if (cfg.provider === 'gemini') {
       const systemText = apiMessages.filter((m) => m.role === 'system').map((m) => m.content).join('\n\n');
       const userMessages = apiMessages.filter((m) => m.role !== 'system');
-      const geminiMessages = userMessages.map((m, idx) => {
+      let contents = userMessages.map((m, idx) => {
         const base = m.content || '';
-        const content = idx === 0 && systemText ? `${systemText}\n\n${base}` : base;
+        const text = idx === 0 && systemText ? `${systemText}\n\n${base}` : base;
         return {
           role: m.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: content }],
+          parts: [{ text }],
         };
       });
 
-      const response = await fetch(`${cfg.apiUrl}?key=${encodeURIComponent(cfg.apiKey)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: geminiMessages,
-          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
-        }),
-      });
+      // Function-calling loop — Gemini may issue multiple tool calls before replying
+      const MAX_TOOL_ITERATIONS = 6;
+      const collectedToolActions = [];
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error('Gemini API error:', response.status, errText);
-        let errDetail = '';
-        try {
-          const errJson = JSON.parse(errText);
-          errDetail = (errJson.error && (errJson.error.message || errJson.error.status)) || '';
-        } catch { /* ignore parse errors */ }
-        const errMsg = errDetail || errText.slice(0, 300) || `HTTP ${response.status}`;
-        return res.status(502).json({ error: `Gemini error: ${errMsg}` });
+      for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+        const response = await fetch(`${cfg.apiUrl}?key=${encodeURIComponent(cfg.apiKey)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents,
+            tools: GEMINI_TOOLS,
+            generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+          }),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          console.error('Gemini API error:', response.status, errText);
+          let errDetail = '';
+          try {
+            const errJson = JSON.parse(errText);
+            errDetail = (errJson.error && (errJson.error.message || errJson.error.status)) || '';
+          } catch { /* ignore parse errors */ }
+          const errMsg = errDetail || errText.slice(0, 300) || `HTTP ${response.status}`;
+          return res.status(502).json({ error: `Gemini error: ${errMsg}` });
+        }
+
+        const data = await response.json();
+        const candidate = data.candidates && data.candidates[0];
+        const candidateParts = candidate && candidate.content && candidate.content.parts;
+
+        if (!candidateParts || candidateParts.length === 0) {
+          return res.status(502).json({ error: 'Invalid Gemini response' });
+        }
+
+        const funcCalls = candidateParts.filter((p) => p.functionCall);
+        const textParts = candidateParts.filter((p) => p.text);
+
+        // No function calls → final text answer
+        if (funcCalls.length === 0) {
+          const content = textParts.map((p) => p.text || '').join('\n');
+          if (!content) return res.status(502).json({ error: 'Empty Gemini response' });
+          return res.json({
+            role: 'assistant',
+            content,
+            mock: false,
+            mode: cfg.mode,
+            apiUrl: cfg.apiUrl,
+            model: cfg.model,
+            provider: cfg.provider,
+            toolActions: collectedToolActions.length ? collectedToolActions : undefined,
+          });
+        }
+
+        // Execute all function calls and collect results
+        const modelTurn = { role: 'model', parts: candidateParts };
+        const funcResponses = [];
+
+        for (const part of funcCalls) {
+          const { name, args } = part.functionCall;
+          let result;
+          if (name === 'list_files') {
+            result = toolListFiles(args && args.path);
+          } else if (name === 'read_file') {
+            result = toolReadFile(args && args.path);
+          } else if (name === 'create_file') {
+            result = toolCreateFile(args && args.path, args && args.content);
+            if (result.success) {
+              collectedToolActions.push({ type: 'file_created', path: result.path, content: args.content });
+            }
+          } else if (name === 'run_build') {
+            result = await toolRunBuild(args && args.command);
+            collectedToolActions.push({ type: 'build_result', success: result.success, stdout: result.stdout, stderr: result.stderr });
+          } else {
+            result = { error: `Unknown tool: ${name}` };
+          }
+          funcResponses.push({ functionResponse: { name, response: result } });
+        }
+
+        const userTurn = { role: 'user', parts: funcResponses };
+        contents = [...contents, modelTurn, userTurn];
       }
 
-      const data = await response.json();
-      const parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
-      const content = parts ? parts.map((p) => p.text || '').join('\n') : '';
-      if (!content) {
-        return res.status(502).json({ error: 'Invalid Gemini response' });
-      }
-
-      return res.json({
-        role: 'assistant',
-        content,
-        mock: false,
-        mode: cfg.mode,
-        apiUrl: cfg.apiUrl,
-        model: cfg.model,
-        provider: cfg.provider,
-      });
+      return res.status(502).json({ error: 'Gemini function-calling loop exceeded maximum iterations' });
     }
 
     const headers = { 'Content-Type': 'application/json' };
@@ -847,6 +1020,40 @@ router.post('/config/resolve', (req, res) => {
     apiKeyPresent: resolved.hasKey,
     provider: resolved.provider,
   });
+});
+
+// ── Gemini Admin Tool REST endpoints ──────────────────────────
+
+// GET /api/ai/tools/files?path=<dir>  — browse project files
+router.get('/tools/files', (req, res) => {
+  const result = toolListFiles(req.query.path || '');
+  if (result.error) return res.status(result.error === 'Access denied' ? 403 : 500).json(result);
+  res.json(result);
+});
+
+// GET /api/ai/tools/file?path=<file>  — read a project file
+router.get('/tools/file', (req, res) => {
+  if (!req.query.path) return res.status(400).json({ error: 'path query parameter is required' });
+  const result = toolReadFile(req.query.path);
+  if (result.error) return res.status(result.error === 'Access denied' ? 403 : 500).json(result);
+  res.json(result);
+});
+
+// POST /api/ai/tools/file  { path, content }  — create / overwrite a project file
+router.post('/tools/file', (req, res) => {
+  const { path: filePath, content } = req.body || {};
+  if (!filePath) return res.status(400).json({ error: 'path is required' });
+  const result = toolCreateFile(filePath, content || '');
+  if (result.error) return res.status(result.error === 'Access denied' ? 403 : 500).json(result);
+  res.json(result);
+});
+
+// POST /api/ai/tools/build  { command }  — run a whitelisted npm script
+router.post('/tools/build', async (req, res) => {
+  const { command } = req.body || {};
+  const result = await toolRunBuild(command || 'build');
+  if (result.error && !result.stdout) return res.status(400).json(result);
+  res.json(result);
 });
 
 module.exports = router;

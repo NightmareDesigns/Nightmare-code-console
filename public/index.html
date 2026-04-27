@@ -354,6 +354,15 @@
           </div>
           <button class="icon-btn-sm" id="clearChatBtn" title="Clear chat" aria-label="Clear chat">🗑</button>
         </div>
+
+        <!-- Gemini Admin Tools Bar (visible when Gemini is active) -->
+        <div class="gemini-tools-bar" id="geminiToolsBar" aria-label="Gemini admin tools">
+          <button class="gt-btn" id="gtListFilesBtn" title="Browse project files with Gemini" aria-label="Browse files">📂 Files</button>
+          <button class="gt-btn" id="gtReadFileBtn" title="Ask Gemini to read a specific file" aria-label="Read file">📄 Read</button>
+          <button class="gt-btn" id="gtCreateFileBtn" title="Ask Gemini to create a new code file" aria-label="Create file">✨ New File</button>
+          <button class="gt-btn" id="gtBuildBtn" title="Trigger auto-build via Gemini" aria-label="Auto-build">🔨 Build</button>
+          <button class="gt-btn" id="gtAnalyzeBtn" title="Ask Gemini to analyze the project" aria-label="Analyze project">🔍 Analyze</button>
+        </div>
         <div class="ai-messages" id="aiMessages" aria-live="polite" aria-label="Chat messages">
           <div class="ai-message assistant">
             <div class="ai-avatar">🩸</div>
