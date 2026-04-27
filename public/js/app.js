@@ -534,8 +534,7 @@
         }),
       });
       const data = await resp.json();
-      const rawMode = data.mode || (data.mockMode ? 'OFFLINE' : data.isLocalEndpoint ? 'LOCAL' : 'LIVE');
-      const label = rawMode === 'MOCK' ? 'OFFLINE' : rawMode;
+      const label = data.mode || (data.mockMode ? 'OFFLINE' : data.isLocalEndpoint ? 'LOCAL' : 'LIVE');
       setAiBadge(label, !data.mockMode, data.apiUrl || '');
       if (showStatus) {
         const detail = data.apiUrl ? `(${data.apiUrl})` : '';
