@@ -19,6 +19,9 @@
   const gtListFilesBtn   = document.getElementById('gtListFilesBtn');
   const gtReadFileBtn    = document.getElementById('gtReadFileBtn');
   const gtCreateFileBtn  = document.getElementById('gtCreateFileBtn');
+  const gtMkdirBtn       = document.getElementById('gtMkdirBtn');
+  const gtDeleteBtn      = document.getElementById('gtDeleteBtn');
+  const gtMoveBtn        = document.getElementById('gtMoveBtn');
   const gtBuildBtn       = document.getElementById('gtBuildBtn');
   const gtAnalyzeBtn     = document.getElementById('gtAnalyzeBtn');
 
@@ -252,13 +255,20 @@
     for (const action of toolActions) {
       if (action.type === 'file_created') {
         appendToolNotice(`✅ **Gemini created file:** \`${action.path}\``, 'success', action.path);
-        // Refresh file tree
+        if (window.NightmareApp && window.NightmareApp.loadFileTree) window.NightmareApp.loadFileTree();
+      } else if (action.type === 'dir_created') {
+        appendToolNotice(`📁 **Gemini created directory:** \`${action.path}\``, 'success');
+        if (window.NightmareApp && window.NightmareApp.loadFileTree) window.NightmareApp.loadFileTree();
+      } else if (action.type === 'file_deleted') {
+        appendToolNotice(`🗑 **Gemini deleted:** \`${action.path}\``, 'warn');
+        if (window.NightmareApp && window.NightmareApp.loadFileTree) window.NightmareApp.loadFileTree();
+      } else if (action.type === 'file_moved') {
+        appendToolNotice(`✂️ **Gemini moved:** \`${action.from}\` → \`${action.to}\``, 'info');
         if (window.NightmareApp && window.NightmareApp.loadFileTree) window.NightmareApp.loadFileTree();
       } else if (action.type === 'build_result') {
         const icon = action.success ? '✅' : '⚠️';
         const label = action.success ? 'Build succeeded' : 'Build finished with errors';
         appendToolNotice(`${icon} **${label}**`, action.success ? 'success' : 'warn');
-        // Write build output to the terminal / console
         const output = [action.stdout, action.stderr].filter(Boolean).join('\n');
         if (output && window.NightmareApp && window.NightmareApp.logToConsole) {
           window.NightmareApp.logToConsole(`[Gemini Build]\n${output}`, action.success ? 'log' : 'warn');
@@ -401,7 +411,7 @@
   }
 
   async function geminiBuild() {
-    const cmd = prompt('npm script to run (build / install / test / lint / dev / start):', 'build');
+    const cmd = prompt('npm script to run (build / install / test / lint / dev / start / clean / format / compile / deploy / bundle / watch / preview / generate):', 'build');
     if (!cmd) return;
 
     appendMessage('user', `🔨 Running build: \`npm run ${cmd}\``);
@@ -445,10 +455,36 @@
     send();
   }
 
+  function geminiMkdir() {
+    const dirPath = prompt('Directory path to create (e.g. src/components/ui):');
+    if (!dirPath) return;
+    if (input) input.value = `Create the directory \`${dirPath}\` (and any needed parent directories).`;
+    send();
+  }
+
+  function geminiDeleteFile() {
+    const filePath = prompt('File or directory path to delete:');
+    if (!filePath) return;
+    if (input) input.value = `Delete the file or directory \`${filePath}\`.`;
+    send();
+  }
+
+  function geminiMoveFile() {
+    const from = prompt('Source path (file or directory to move/rename):');
+    if (!from) return;
+    const to = prompt(`Destination path for \`${from}\`:`);
+    if (!to) return;
+    if (input) input.value = `Move (rename) \`${from}\` to \`${to}\`.`;
+    send();
+  }
+
   // ── Gemini tool button event listeners ────────────────────
   if (gtListFilesBtn)  gtListFilesBtn.addEventListener('click',  geminiListFiles);
   if (gtReadFileBtn)   gtReadFileBtn.addEventListener('click',   geminiReadFile);
   if (gtCreateFileBtn) gtCreateFileBtn.addEventListener('click', geminiCreateFile);
+  if (gtMkdirBtn)      gtMkdirBtn.addEventListener('click',      geminiMkdir);
+  if (gtDeleteBtn)     gtDeleteBtn.addEventListener('click',     geminiDeleteFile);
+  if (gtMoveBtn)       gtMoveBtn.addEventListener('click',       geminiMoveFile);
   if (gtBuildBtn)      gtBuildBtn.addEventListener('click',      geminiBuild);
   if (gtAnalyzeBtn)    gtAnalyzeBtn.addEventListener('click',    geminiAnalyzeProject);
 

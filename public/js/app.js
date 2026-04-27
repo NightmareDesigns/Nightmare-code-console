@@ -249,14 +249,18 @@
     switch (command) {
       case 'help':
         term.writeln('\x1b[33mAvailable commands:\x1b[0m');
-        term.writeln('  help           — show this help');
-        term.writeln('  clear          — clear terminal');
-        term.writeln('  echo <msg>     — echo a message');
-        term.writeln('  ls [path]      — list project files');
-        term.writeln('  cat <path>     — read a project file');
-        term.writeln('  build [script] — run npm script (build/test/install/lint)');
-        term.writeln('  version        — show version');
-        term.writeln('  ai <msg>       — quick AI query');
+        term.writeln('  help               — show this help');
+        term.writeln('  clear              — clear terminal');
+        term.writeln('  echo <msg>         — echo a message');
+        term.writeln('  ls [path]          — list project files');
+        term.writeln('  cat <path>         — read a project file');
+        term.writeln('  touch <path>       — create an empty file');
+        term.writeln('  mkdir <path>       — create a directory');
+        term.writeln('  rm <path>          — delete a file or directory');
+        term.writeln('  mv <src> <dest>    — move or rename a file');
+        term.writeln('  build [script]     — run npm script (build/test/install/lint)');
+        term.writeln('  version            — show version');
+        term.writeln('  ai <msg>           — quick AI query');
         break;
       case 'clear':
         term.clear();
@@ -331,6 +335,71 @@
           term.writeln('\x1b[31mUsage: ai <your question>\x1b[0m');
         }
         break;
+      case 'touch': {
+        const touchPath = args[0];
+        if (!touchPath) { term.writeln('\x1b[31mUsage: touch <path>\x1b[0m'); break; }
+        fetch('/api/ai/tools/file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: touchPath, content: '' }),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.error) { term.writeln(`\x1b[31m${data.error}\x1b[0m`); }
+            else { term.writeln(`\x1b[32mCreated: ${data.path}\x1b[0m`); loadFileTree(); }
+            term.write('\x1b[32m$ \x1b[0m');
+          })
+          .catch((err) => { term.writeln(`\x1b[31m${err.message}\x1b[0m`); term.write('\x1b[32m$ \x1b[0m'); });
+        return;
+      }
+      case 'mkdir': {
+        const mkdirPath = args[0];
+        if (!mkdirPath) { term.writeln('\x1b[31mUsage: mkdir <path>\x1b[0m'); break; }
+        fetch('/api/mkdir', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: mkdirPath }),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.error) { term.writeln(`\x1b[31m${data.error}\x1b[0m`); }
+            else { term.writeln(`\x1b[32mDirectory created: ${mkdirPath}\x1b[0m`); loadFileTree(); }
+            term.write('\x1b[32m$ \x1b[0m');
+          })
+          .catch((err) => { term.writeln(`\x1b[31m${err.message}\x1b[0m`); term.write('\x1b[32m$ \x1b[0m'); });
+        return;
+      }
+      case 'rm': {
+        const rmPath = args[0];
+        if (!rmPath) { term.writeln('\x1b[31mUsage: rm <path>\x1b[0m'); break; }
+        fetch(`/api/file?path=${encodeURIComponent(rmPath)}`, { method: 'DELETE' })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.error) { term.writeln(`\x1b[31m${data.error}\x1b[0m`); }
+            else { term.writeln(`\x1b[32mDeleted: ${rmPath}\x1b[0m`); loadFileTree(); }
+            term.write('\x1b[32m$ \x1b[0m');
+          })
+          .catch((err) => { term.writeln(`\x1b[31m${err.message}\x1b[0m`); term.write('\x1b[32m$ \x1b[0m'); });
+        return;
+      }
+      case 'mv': {
+        const mvSrc = args[0];
+        const mvDest = args[1];
+        if (!mvSrc || !mvDest) { term.writeln('\x1b[31mUsage: mv <src> <dest>\x1b[0m'); break; }
+        fetch('/api/ai/tools/move', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ from: mvSrc, to: mvDest }),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.error) { term.writeln(`\x1b[31m${data.error}\x1b[0m`); }
+            else { term.writeln(`\x1b[32mMoved: ${data.from} → ${data.to}\x1b[0m`); loadFileTree(); }
+            term.write('\x1b[32m$ \x1b[0m');
+          })
+          .catch((err) => { term.writeln(`\x1b[31m${err.message}\x1b[0m`); term.write('\x1b[32m$ \x1b[0m'); });
+        return;
+      }
       default:
         term.writeln(`\x1b[31mCommand not found: ${cmd}\x1b[0m`);
         term.writeln('Type \x1b[33mhelp\x1b[0m for available commands.');
@@ -1246,4 +1315,128 @@
   }, 3000);
 
   window.NightmareApp = { setStatus, logToConsole, loadFileTree, runCode };
+
+  // ── Local Code Vault ────────────────────────────────────────
+  const VAULT_KEY = 'nm-local-vault';
+  const vaultSaveBtn    = document.getElementById('vaultSaveBtn');
+  const vaultExportBtn  = document.getElementById('vaultExportBtn');
+  const vaultImportBtn  = document.getElementById('vaultImportBtn');
+  const vaultImportInput = document.getElementById('vaultImportInput');
+  const vaultProjectName = document.getElementById('vaultProjectName');
+  const vaultList        = document.getElementById('vaultList');
+
+  function loadVault() {
+    try { return JSON.parse(localStorage.getItem(VAULT_KEY) || '{}'); } catch { return {}; }
+  }
+
+  function saveVault(vault) {
+    localStorage.setItem(VAULT_KEY, JSON.stringify(vault));
+  }
+
+  function renderVaultList() {
+    if (!vaultList) return;
+    const vault = loadVault();
+    const projects = Object.keys(vault).sort();
+    vaultList.innerHTML = '';
+    if (projects.length === 0) {
+      vaultList.innerHTML = '<div class="vault-empty" style="color:var(--text-secondary);font-size:12px;padding:4px 0">No saved projects yet.</div>';
+      return;
+    }
+    projects.forEach((name) => {
+      const entry = vault[name];
+      const row = document.createElement('div');
+      row.className = 'vault-item';
+      row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px';
+      const label = document.createElement('span');
+      label.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default';
+      label.title = `${entry.tabs ? entry.tabs.length : 0} tab(s) — saved ${new Date(entry.savedAt || 0).toLocaleString()}`;
+      label.textContent = `💾 ${name}`;
+      const loadBtn = document.createElement('button');
+      loadBtn.className = 'btn-sm';
+      loadBtn.textContent = 'Load';
+      loadBtn.title = `Restore tabs from "${name}"`;
+      loadBtn.addEventListener('click', () => loadVaultProject(name));
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn-sm';
+      delBtn.style.color = '#ff6b6b';
+      delBtn.textContent = '✕';
+      delBtn.title = `Delete "${name}" from vault`;
+      delBtn.addEventListener('click', () => {
+        const v = loadVault();
+        delete v[name];
+        saveVault(v);
+        renderVaultList();
+        setStatus(`Vault: deleted "${name}"`);
+      });
+      row.appendChild(label);
+      row.appendChild(loadBtn);
+      row.appendChild(delBtn);
+      vaultList.appendChild(row);
+    });
+  }
+
+  function saveVaultProject() {
+    const name = (vaultProjectName ? vaultProjectName.value.trim() : '') || 'untitled';
+    if (!window.NightmareEditor) { setStatus('Editor not ready'); return; }
+    const tabs = window.NightmareEditor.getAllTabs ? window.NightmareEditor.getAllTabs() : [];
+    if (tabs.length === 0) { setStatus('No tabs open to save'); return; }
+    const vault = loadVault();
+    vault[name] = { name, savedAt: Date.now(), tabs: tabs.map((t) => ({ name: t.name, language: t.language, content: t.content, path: t.path || null })) };
+    saveVault(vault);
+    renderVaultList();
+    setStatus(`Vault: saved "${name}" (${tabs.length} tab${tabs.length !== 1 ? 's' : ''})`);
+  }
+
+  function loadVaultProject(name) {
+    const vault = loadVault();
+    const entry = vault[name];
+    if (!entry || !Array.isArray(entry.tabs) || !window.NightmareEditor) return;
+    entry.tabs.forEach((t) => {
+      window.NightmareEditor.openFile(t.path || t.name, t.name, t.content || '', t.language || 'plaintext');
+    });
+    setStatus(`Vault: loaded "${name}" (${entry.tabs.length} tab${entry.tabs.length !== 1 ? 's' : ''})`);
+  }
+
+  function exportVault() {
+    const vault = loadVault();
+    const json = JSON.stringify(vault, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nightmare-vault-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus('Vault exported as JSON');
+  }
+
+  function importVaultFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const incoming = JSON.parse(e.target.result);
+        if (typeof incoming !== 'object' || Array.isArray(incoming)) throw new Error('Invalid vault format');
+        const vault = loadVault();
+        Object.assign(vault, incoming);
+        saveVault(vault);
+        renderVaultList();
+        setStatus(`Vault: imported ${Object.keys(incoming).length} project(s)`);
+      } catch (err) {
+        setStatus(`Vault import error: ${err.message}`);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  if (vaultSaveBtn)   vaultSaveBtn.addEventListener('click', saveVaultProject);
+  if (vaultExportBtn) vaultExportBtn.addEventListener('click', exportVault);
+  if (vaultImportBtn) vaultImportBtn.addEventListener('click', () => vaultImportInput && vaultImportInput.click());
+  if (vaultImportInput) {
+    vaultImportInput.addEventListener('change', () => {
+      const file = vaultImportInput.files && vaultImportInput.files[0];
+      if (file) { importVaultFile(file); vaultImportInput.value = ''; }
+    });
+  }
+
+  renderVaultList();
 })();

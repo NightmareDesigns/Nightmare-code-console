@@ -427,6 +427,12 @@ console.log("Nightmare Code Console — Initialized 🩸");
     relayout,
     updateOption,
     getTab,
+    getAllTabs: () => {
+      // Sync active tab content before returning
+      const current = getTab(activeTabId);
+      if (current && editor) current.content = editor.getValue();
+      return tabs.slice();
+    },
     tabs,
     get activeTabId() { return activeTabId; },
   };

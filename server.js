@@ -150,6 +150,40 @@ app.post('/api/file', apiLimiter, (req, res) => {
   }
 });
 
+app.delete('/api/file', apiLimiter, (req, res) => {
+  const cwd = process.cwd();
+  const filePath = path.resolve(req.query.path || '');
+  if (!isPathInsideBase(cwd, filePath)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  try {
+    const stat = fs.statSync(filePath);
+    if (stat.isDirectory()) {
+      fs.rmSync(filePath, { recursive: true, force: true });
+    } else {
+      fs.unlinkSync(filePath);
+    }
+    res.json({ success: true, path: filePath });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/mkdir', apiLimiter, (req, res) => {
+  const { path: dirPath } = req.body;
+  const resolved = path.resolve(dirPath || '');
+  const cwd = process.cwd();
+  if (!isPathInsideBase(cwd, resolved)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  try {
+    fs.mkdirSync(resolved, { recursive: true });
+    res.json({ success: true, path: resolved });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Health check (light rate limit to prevent abuse)
 app.get('/api/health', apiLimiter, (req, res) => {
   res.json({ status: 'ok', version: '1.0.0', name: 'Nightmare Code Console' });

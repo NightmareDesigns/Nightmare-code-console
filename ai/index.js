@@ -11,7 +11,7 @@ const MAX_FILE_CONTENT_CHARS = 16000;
 const MAX_STDOUT_CHARS = 8000;
 const MAX_STDERR_CHARS = 2000;
 const MAX_TOOL_ITERATIONS = 6;
-const ALLOWED_BUILD_SCRIPTS = ['build', 'install', 'test', 'dev', 'lint', 'start'];
+const ALLOWED_BUILD_SCRIPTS = ['build', 'install', 'test', 'dev', 'lint', 'start', 'clean', 'format', 'check', 'compile', 'deploy', 'prebuild', 'postbuild', 'prepare', 'preview', 'generate', 'bundle', 'watch'];
 const ALLOWED_GEMINI_HOST = 'generativelanguage.googleapis.com';
 
 // ── Gemini Admin Tool helpers ──────────────────────────────
@@ -71,6 +71,49 @@ function toolCreateFile(filePath, content) {
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, content || '', 'utf8');
     return { success: true, path: path.relative(cwd, target) };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function toolMkdir(dirPath) {
+  const cwd = process.cwd();
+  const target = safePath(dirPath);
+  if (!target) return { error: 'Access denied' };
+  try {
+    fs.mkdirSync(target, { recursive: true });
+    return { success: true, path: path.relative(cwd, target) };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function toolDeleteFile(filePath) {
+  const cwd = process.cwd();
+  const target = safePath(filePath);
+  if (!target) return { error: 'Access denied' };
+  try {
+    const stat = fs.statSync(target);
+    if (stat.isDirectory()) {
+      fs.rmSync(target, { recursive: true, force: true });
+    } else {
+      fs.unlinkSync(target);
+    }
+    return { success: true, path: path.relative(cwd, target) };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function toolMoveFile(sourcePath, destPath) {
+  const cwd = process.cwd();
+  const src = safePath(sourcePath);
+  const dest = safePath(destPath);
+  if (!src || !dest) return { error: 'Access denied' };
+  try {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.renameSync(src, dest);
+    return { success: true, from: path.relative(cwd, src), to: path.relative(cwd, dest) };
   } catch (err) {
     return { error: err.message };
   }
@@ -146,12 +189,46 @@ const GEMINI_TOOLS = [{
     },
     {
       name: 'run_build',
-      description: "Run a project npm script such as 'build', 'install', 'test', 'dev', 'lint', or 'start'.",
+      description: "Run a project npm script such as 'build', 'install', 'test', 'dev', 'lint', 'start', 'clean', 'format', 'compile', 'deploy', 'bundle', 'watch', 'preview', or 'generate'.",
       parameters: {
         type: 'OBJECT',
         properties: {
-          command: { type: 'STRING', description: "npm script name to run: 'build', 'install', 'test', 'dev', 'lint', 'start'." },
+          command: { type: 'STRING', description: "npm script name to run: 'build', 'install', 'test', 'dev', 'lint', 'start', 'clean', 'format', 'compile', 'deploy', 'bundle', 'watch', 'preview', 'generate'." },
         },
+      },
+    },
+    {
+      name: 'mkdir',
+      description: 'Create a new directory (and any necessary parent directories) inside the project workspace.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          path: { type: 'STRING', description: 'Relative path of the directory to create, e.g. src/components/ui' },
+        },
+        required: ['path'],
+      },
+    },
+    {
+      name: 'delete_file',
+      description: 'Delete a file or directory from the project workspace.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          path: { type: 'STRING', description: 'Relative path of the file or directory to delete.' },
+        },
+        required: ['path'],
+      },
+    },
+    {
+      name: 'move_file',
+      description: 'Move or rename a file or directory within the project workspace.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          from: { type: 'STRING', description: 'Relative path of the source file or directory.' },
+          to: { type: 'STRING', description: 'Relative path of the destination.' },
+        },
+        required: ['from', 'to'],
       },
     },
   ],
@@ -283,7 +360,7 @@ function resolveConfig(body = {}) {
 // System prompt that gives the AI context about the Nightmare Code Console
 const SYSTEM_PROMPT = `You are NightmareAI, an advanced coding assistant built into the Nightmare Code Console — a dark-themed, horror-inspired AI-powered code editor. You help developers write, debug, review, and understand code across all programming languages. You are knowledgeable, precise, and embrace a gothic aesthetic. Always format code with proper markdown code blocks using the appropriate language identifier. Provide clear explanations with actionable advice. When debugging, identify root causes and suggest fixes. When writing code, follow best practices and include inline comments for complex logic.
 
-When using the Gemini provider you have access to powerful workspace tools: list_files(path) to browse the project file tree, read_file(path) to read any project file, create_file(path, content) to create new code pages/files, and run_build(command) to trigger npm scripts. Use these tools proactively: when asked to create a file always call create_file; when asked to build always call run_build; when asked to analyze the project use list_files then read_file on relevant files.`;
+When using the Gemini provider you have access to powerful workspace tools: list_files(path) to browse the project file tree, read_file(path) to read any project file, create_file(path, content) to create new code files, mkdir(path) to create directories, delete_file(path) to delete files or directories, move_file(from, to) to rename or move files, and run_build(command) to trigger npm scripts (build, install, test, lint, dev, start, clean, format, compile, deploy, bundle, watch, preview, generate). Use these tools proactively: when asked to create a file always call create_file; when asked to create a folder call mkdir; when asked to delete use delete_file; when asked to rename or move use move_file; when asked to build always call run_build; when asked to analyze the project use list_files then read_file on relevant files. You have full control over the project workspace.`;
 
 // Mock responses for demo mode
 const MOCK_SNIPPETS = [
@@ -955,6 +1032,21 @@ router.post('/chat', async (req, res) => {
           } else if (name === 'run_build') {
             result = await toolRunBuild(args && args.command);
             collectedToolActions.push({ type: 'build_result', success: result.success, stdout: result.stdout, stderr: result.stderr });
+          } else if (name === 'mkdir') {
+            result = toolMkdir(args && args.path);
+            if (result.success) {
+              collectedToolActions.push({ type: 'dir_created', path: result.path });
+            }
+          } else if (name === 'delete_file') {
+            result = toolDeleteFile(args && args.path);
+            if (result.success) {
+              collectedToolActions.push({ type: 'file_deleted', path: result.path });
+            }
+          } else if (name === 'move_file') {
+            result = toolMoveFile(args && args.from, args && args.to);
+            if (result.success) {
+              collectedToolActions.push({ type: 'file_moved', from: result.from, to: result.to });
+            }
           } else {
             result = { error: `Unknown tool: ${name}` };
           }
@@ -1088,6 +1180,32 @@ router.post('/tools/build', async (req, res) => {
   const { command } = req.body || {};
   const result = await toolRunBuild(command || 'build');
   if (result.error && !result.stdout) return res.status(400).json(result);
+  res.json(result);
+});
+
+// POST /api/ai/tools/mkdir  { path }  — create a directory
+router.post('/tools/mkdir', (req, res) => {
+  const { path: dirPath } = req.body || {};
+  if (!dirPath) return res.status(400).json({ error: 'path is required' });
+  const result = toolMkdir(dirPath);
+  if (result.error) return res.status(result.error === 'Access denied' ? 403 : 500).json(result);
+  res.json(result);
+});
+
+// DELETE /api/ai/tools/file?path=<file>  — delete a file or directory
+router.delete('/tools/file', (req, res) => {
+  if (!req.query.path) return res.status(400).json({ error: 'path query parameter is required' });
+  const result = toolDeleteFile(req.query.path);
+  if (result.error) return res.status(result.error === 'Access denied' ? 403 : 500).json(result);
+  res.json(result);
+});
+
+// POST /api/ai/tools/move  { from, to }  — move or rename a file/directory
+router.post('/tools/move', (req, res) => {
+  const { from, to } = req.body || {};
+  if (!from || !to) return res.status(400).json({ error: 'from and to are required' });
+  const result = toolMoveFile(from, to);
+  if (result.error) return res.status(result.error === 'Access denied' ? 403 : 500).json(result);
   res.json(result);
 });
 

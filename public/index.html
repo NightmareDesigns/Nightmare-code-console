@@ -284,6 +284,18 @@
               <button class="btn-sm" id="applyAiSettingsBtn" aria-label="Resolve AI settings" style="width:100%">Test &amp; Resolve AI Mode</button>
             </div>
             <div class="setting-group">
+              <label class="setting-label">🔒 Local Code Vault</label>
+              <small class="setting-hint">Save your editor tabs locally in the browser — no git, no GitHub. Your code stays on your device only.</small>
+              <input type="text" class="search-input" id="vaultProjectName" placeholder="Project name (e.g. my-app)" aria-label="Local vault project name" autocomplete="off" />
+              <div class="vault-actions" style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+                <button class="btn-sm" id="vaultSaveBtn" aria-label="Save current tabs to local vault">💾 Save</button>
+                <button class="btn-sm" id="vaultExportBtn" aria-label="Export vault as JSON file">⬇ Export</button>
+                <button class="btn-sm" id="vaultImportBtn" aria-label="Import vault from JSON file">⬆ Import</button>
+                <input type="file" id="vaultImportInput" accept=".json" style="display:none" aria-label="Import vault JSON" />
+              </div>
+              <div class="vault-list" id="vaultList" style="margin-top:8px"></div>
+            </div>
+            <div class="setting-group">
               <label class="setting-label">VS Code Add-on Modules</label>
               <small class="setting-hint">Track extensions you want to install alongside Nightmare Code Console. Click a module to copy the VS Code install command.</small>
               <div class="addon-add-row">
@@ -360,6 +372,9 @@
           <button class="gt-btn" id="gtListFilesBtn" title="Browse project files with Gemini" aria-label="Browse files">📂 Files</button>
           <button class="gt-btn" id="gtReadFileBtn" title="Ask Gemini to read a specific file" aria-label="Read file">📄 Read</button>
           <button class="gt-btn" id="gtCreateFileBtn" title="Ask Gemini to create a new code file" aria-label="Create file">✨ New File</button>
+          <button class="gt-btn" id="gtMkdirBtn" title="Ask Gemini to create a new directory" aria-label="Create directory">📁 Mkdir</button>
+          <button class="gt-btn" id="gtDeleteBtn" title="Ask Gemini to delete a file or folder" aria-label="Delete file">🗑 Delete</button>
+          <button class="gt-btn" id="gtMoveBtn" title="Ask Gemini to move or rename a file" aria-label="Move file">✂️ Move</button>
           <button class="gt-btn" id="gtBuildBtn" title="Trigger auto-build via Gemini" aria-label="Auto-build">🔨 Build</button>
           <button class="gt-btn" id="gtAnalyzeBtn" title="Ask Gemini to analyze the project" aria-label="Analyze project">🔍 Analyze</button>
         </div>
