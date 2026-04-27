@@ -6,24 +6,36 @@ const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
 
+// ── Constants ──────────────────────────────────────────────
+const MAX_FILE_CONTENT_CHARS = 16000;
+const MAX_STDOUT_CHARS = 8000;
+const MAX_STDERR_CHARS = 2000;
+const MAX_TOOL_ITERATIONS = 6;
+const ALLOWED_BUILD_SCRIPTS = ['build', 'install', 'test', 'dev', 'lint', 'start'];
+const ALLOWED_GEMINI_HOST = 'generativelanguage.googleapis.com';
+
 // ── Gemini Admin Tool helpers ──────────────────────────────
 
-function isPathInsideBase(baseDir, targetPath) {
-  const resolvedBase = fs.realpathSync(baseDir);
-  let resolvedTarget;
-  try {
-    resolvedTarget = fs.realpathSync(targetPath);
-  } catch {
-    resolvedTarget = path.resolve(targetPath);
-  }
-  const rel = path.relative(resolvedBase, resolvedTarget);
-  return !rel.startsWith('..') && !path.isAbsolute(rel);
+/**
+ * Sanitize and validate that a user-supplied path stays inside the project root.
+ * Returns the resolved absolute path on success, or null if access is denied.
+ */
+function safePath(userInput) {
+  if (!userInput || typeof userInput !== 'string') return null;
+  // Reject null bytes and obviously suspicious sequences
+  if (userInput.includes('\x00')) return null;
+  const cwd = process.cwd();
+  const resolved = path.resolve(cwd, path.normalize(userInput));
+  // Ensure the resolved path is actually inside cwd
+  const rel = path.relative(cwd, resolved);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) return null;
+  return resolved;
 }
 
 function toolListFiles(dirPath) {
   const cwd = process.cwd();
-  const target = path.resolve(dirPath || cwd);
-  if (!isPathInsideBase(cwd, target)) return { error: 'Access denied' };
+  const target = safePath(dirPath || '.');
+  if (!target) return { error: 'Access denied' };
   try {
     const entries = fs.readdirSync(target, { withFileTypes: true });
     return {
@@ -41,11 +53,11 @@ function toolListFiles(dirPath) {
 
 function toolReadFile(filePath) {
   const cwd = process.cwd();
-  const target = path.resolve(filePath);
-  if (!isPathInsideBase(cwd, target)) return { error: 'Access denied' };
+  const target = safePath(filePath);
+  if (!target) return { error: 'Access denied' };
   try {
     const content = fs.readFileSync(target, 'utf8');
-    return { path: path.relative(cwd, target), content: content.slice(0, 16000), lines: content.split('\n').length };
+    return { path: path.relative(cwd, target), content: content.slice(0, MAX_FILE_CONTENT_CHARS), lines: content.split('\n').length };
   } catch (err) {
     return { error: err.message };
   }
@@ -53,8 +65,8 @@ function toolReadFile(filePath) {
 
 function toolCreateFile(filePath, content) {
   const cwd = process.cwd();
-  const target = path.resolve(filePath);
-  if (!isPathInsideBase(cwd, target)) return { error: 'Access denied' };
+  const target = safePath(filePath);
+  if (!target) return { error: 'Access denied' };
   try {
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, content || '', 'utf8');
@@ -63,8 +75,6 @@ function toolCreateFile(filePath, content) {
     return { error: err.message };
   }
 }
-
-const ALLOWED_BUILD_SCRIPTS = ['build', 'install', 'test', 'dev', 'lint', 'start'];
 
 function toolRunBuild(command) {
   const raw = (command || 'build').toLowerCase().trim().replace(/^npm\s+(run\s+)?/, '');
@@ -77,10 +87,25 @@ function toolRunBuild(command) {
       if (err && !stdout && !stderr) {
         resolve({ success: false, error: err.message });
       } else {
-        resolve({ success: !err, stdout: (stdout || '').slice(0, 8000), stderr: (stderr || '').slice(0, 2000) });
+        resolve({ success: !err, stdout: (stdout || '').slice(0, MAX_STDOUT_CHARS), stderr: (stderr || '').slice(0, MAX_STDERR_CHARS) });
       }
     });
   });
+}
+
+/**
+ * Validate that a Gemini API URL points only to the official Gemini endpoint.
+ * This prevents server-side request forgery via a user-supplied provider URL.
+ */
+function validateGeminiUrl(apiUrl) {
+  try {
+    const u = new URL(apiUrl);
+    if (u.hostname !== ALLOWED_GEMINI_HOST) return false;
+    if (u.protocol !== 'https:') return false;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Gemini function declarations (tool definitions)
@@ -836,6 +861,11 @@ router.post('/chat', async (req, res) => {
     const fetch = require('node-fetch');
 
     if (cfg.provider === 'gemini') {
+      // Validate Gemini URL to prevent SSRF
+      if (!validateGeminiUrl(cfg.apiUrl)) {
+        return res.status(400).json({ error: 'Invalid Gemini API URL — must point to generativelanguage.googleapis.com over HTTPS' });
+      }
+
       const systemText = apiMessages.filter((m) => m.role === 'system').map((m) => m.content).join('\n\n');
       const userMessages = apiMessages.filter((m) => m.role !== 'system');
       let contents = userMessages.map((m, idx) => {
@@ -848,11 +878,11 @@ router.post('/chat', async (req, res) => {
       });
 
       // Function-calling loop — Gemini may issue multiple tool calls before replying
-      const MAX_TOOL_ITERATIONS = 6;
       const collectedToolActions = [];
 
       for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
-        const response = await fetch(`${cfg.apiUrl}?key=${encodeURIComponent(cfg.apiKey)}`, {
+        const geminiUrl = `${cfg.apiUrl}?key=${encodeURIComponent(cfg.apiKey)}`;
+        const response = await fetch(geminiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

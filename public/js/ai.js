@@ -4,6 +4,9 @@
 'use strict';
 
 (function AiModule() {
+  const MAX_TERMINAL_LINES = 100;
+  const MAX_BUILD_OUTPUT_CHARS = 2000;
+
   const messagesContainer = document.getElementById('aiMessages');
   const input = document.getElementById('aiInput');
   const sendBtn = document.getElementById('aiSendBtn');
@@ -415,7 +418,7 @@
       const data = await resp.json();
       const icon = data.success ? '✅' : '⚠️';
       const label = data.success ? 'Build succeeded!' : 'Build finished with errors';
-      const output = [data.stdout, data.stderr].filter(Boolean).join('\n').slice(0, 2000);
+      const output = [data.stdout, data.stderr].filter(Boolean).join('\n').slice(0, MAX_BUILD_OUTPUT_CHARS);
       const reply = `${icon} **${label}**\n\n\`\`\`\n${output || '(no output)'}\n\`\`\``;
 
       thinkingBubble.innerHTML = renderMarkdown(reply);
@@ -438,7 +441,7 @@
   }
 
   async function geminiAnalyzeProject() {
-    if (input) input.value = 'Please analyze this project: list all files with list_files, read the key source files (server.js, package.json, ai/index.js, public/js/app.js), then give me a comprehensive overview of the architecture, what each part does, and your top suggestions for improvement.';
+    if (input) input.value = 'Please analyze this project: first use list_files to see the project structure, then read the key source files to understand the codebase, then give me a comprehensive overview of the architecture, what each part does, and your top suggestions for improvement.';
     send();
   }
 
