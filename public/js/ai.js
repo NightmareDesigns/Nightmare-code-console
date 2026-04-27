@@ -40,12 +40,14 @@
     .then((r) => r.json())
     .then((cfg) => {
       if (!badge) return;
-      const providerLabel = (cfg.provider || (cfg.isLocalEndpoint ? 'LOCAL' : 'OPENAI')).toUpperCase();
-      if (cfg.apiConfigured) {
-        const label = cfg.isLocalEndpoint ? 'LOCAL' : providerLabel;
+      const provider = (cfg.provider || '').toLowerCase();
+      if (provider === 'builtin') {
+        setBadge('BUILT-IN', true, 'Offline built-in engine — no API key needed');
+      } else if (cfg.apiConfigured) {
+        const label = cfg.isLocalEndpoint ? 'LOCAL' : (cfg.provider || 'LIVE').toUpperCase();
         setBadge(label, true, cfg.apiUrl || '');
       } else {
-        setBadge('MOCK', false, 'No API key configured');
+        setBadge('OFFLINE', false, 'No API key configured — select a provider in Settings');
       }
     })
     .catch(() => {});
