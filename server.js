@@ -13,6 +13,12 @@ const aiRouter = require('./ai');
 const pluginsRouter = require('./plugins');
 const gitRouter = require('./git');
 
+// ── Constants ──────────────────────────────────────────────
+const JSON_BODY_LIMIT = '10mb';
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 120; // requests per window
+
 const app = express();
 const server = http.createServer(app);
 
@@ -21,6 +27,17 @@ const useDist = fs.existsSync(path.join(__dirname, 'dist'));
 const staticRoot = path.join(__dirname, useDist ? 'dist' : 'public');
 
 // ── Helpers ──────────────────────────────────────────────────
+
+/**
+ * Validates that a resolved path is inside the base directory.
+ * Uses realpath to resolve symlinks and prevent traversal attacks.
+ *
+ * @param {string} baseDir - Base directory to check against
+ * @param {string} targetPath - Target path to validate
+ * @returns {boolean} True if target is inside base, false otherwise
+ *
+ * @security Resolves symlinks to prevent bypassing via symbolic links
+ */
 function isPathInsideBase(baseDir, targetPath) {
   const resolvedBase = fs.realpathSync(baseDir);
   let resolvedTarget;
@@ -71,7 +88,7 @@ function handleWsMessage(ws, msg) {
 }
 
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: JSON_BODY_LIMIT }));
 app.use(express.static(staticRoot));
 
 // Serve vendored frontend dependencies
@@ -87,8 +104,8 @@ if (useDist) {
 
 // Rate limiter for file system and AI routes (prevent abuse)
 const apiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 120,            // 120 requests per minute
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: RATE_LIMIT_MAX_REQUESTS,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please slow down.' },
@@ -142,7 +159,6 @@ app.post('/api/file', apiLimiter, (req, res) => {
     return res.status(403).json({ error: 'Access denied' });
   }
   // Limit file size to prevent DoS
-  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
   if (content && content.length > MAX_FILE_SIZE) {
     return res.status(413).json({ error: 'File content exceeds maximum size (50MB)' });
   }

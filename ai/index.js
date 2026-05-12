@@ -43,6 +43,13 @@ function safePath(userInput) {
   return resolved;
 }
 
+/**
+ * List files and directories in the project workspace.
+ * Used by Gemini function-calling tools.
+ *
+ * @param {string} dirPath - Directory path relative to project root
+ * @returns {object} Object with path and items array, or error object
+ */
 function toolListFiles(dirPath) {
   const cwd = process.cwd();
   const target = safePath(dirPath || '.');
@@ -62,6 +69,13 @@ function toolListFiles(dirPath) {
   }
 }
 
+/**
+ * Read file contents from the project workspace.
+ * Used by Gemini function-calling tools.
+ *
+ * @param {string} filePath - File path relative to project root
+ * @returns {object} Object with path, content (truncated to MAX_FILE_CONTENT_CHARS), and line count
+ */
 function toolReadFile(filePath) {
   const cwd = process.cwd();
   const target = safePath(filePath);
@@ -74,6 +88,14 @@ function toolReadFile(filePath) {
   }
 }
 
+/**
+ * Create or overwrite a file in the project workspace.
+ * Used by Gemini function-calling tools.
+ *
+ * @param {string} filePath - File path relative to project root
+ * @param {string} content - File content to write
+ * @returns {object} Success object with path, or error object
+ */
 function toolCreateFile(filePath, content) {
   const cwd = process.cwd();
   const target = safePath(filePath);
@@ -87,6 +109,13 @@ function toolCreateFile(filePath, content) {
   }
 }
 
+/**
+ * Run an npm script in the project.
+ * Used by Gemini function-calling tools. Only allows whitelisted commands.
+ *
+ * @param {string} command - npm script name (e.g., 'build', 'test')
+ * @returns {Promise<object>} Promise resolving to success/error object with stdout/stderr
+ */
 function toolRunBuild(command) {
   const raw = (command || 'build').toLowerCase().trim().replace(/^npm\s+(run\s+)?/, '');
   const cmd = ALLOWED_BUILD_SCRIPTS.includes(raw) ? raw : null;
