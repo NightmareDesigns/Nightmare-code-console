@@ -47,13 +47,13 @@ wss.on('connection', (ws) => {
       const msg = JSON.parse(data.toString());
       handleWsMessage(ws, msg);
     } catch (err) {
-      console.error('WebSocket message parse error:', err.message);
+      console.error('[WebSocket] Message parse error:', err.message, '| Data:', data.toString().slice(0, 100));
       ws.send(JSON.stringify({ type: 'error', message: 'Invalid message format' }));
     }
   });
 
   ws.on('error', (err) => {
-    console.error('WebSocket error:', err.message);
+    console.error('[WebSocket] Connection error:', err.message);
   });
 });
 
@@ -140,6 +140,11 @@ app.post('/api/file', apiLimiter, (req, res) => {
   const cwd = process.cwd();
   if (!isPathInsideBase(cwd, resolved)) {
     return res.status(403).json({ error: 'Access denied' });
+  }
+  // Limit file size to prevent DoS
+  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+  if (content && content.length > MAX_FILE_SIZE) {
+    return res.status(413).json({ error: 'File content exceeds maximum size (50MB)' });
   }
   try {
     fs.mkdirSync(path.dirname(resolved), { recursive: true });

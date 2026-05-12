@@ -4,9 +4,6 @@
 'use strict';
 
 (function AiModule() {
-  const MAX_TERMINAL_LINES = 100;
-  const MAX_BUILD_OUTPUT_CHARS = 2000;
-
   const messagesContainer = document.getElementById('aiMessages');
   const input = document.getElementById('aiInput');
   const sendBtn = document.getElementById('aiSendBtn');

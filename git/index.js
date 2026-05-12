@@ -4,11 +4,20 @@ const express = require('express');
 const { execFile } = require('child_process');
 const router = express.Router();
 
+// ── Constants ──────────────────────────────────────────────
+const GIT_TIMEOUT_MS = 30000; // 30 second timeout for git operations
 const REPO_CWD = process.cwd();
 
+/**
+ * Execute a git command with timeout and error handling.
+ *
+ * @param {string[]} args - Git command arguments
+ * @returns {Promise<{stdout: string, stderr: string}>}
+ * @throws {Error} If git command times out or fails
+ */
 function runGit(args) {
   return new Promise((resolve, reject) => {
-    execFile('git', args, { cwd: REPO_CWD }, (err, stdout = '', stderr = '') => {
+    execFile('git', args, { cwd: REPO_CWD, timeout: GIT_TIMEOUT_MS }, (err, stdout = '', stderr = '') => {
       if (err) {
         const error = new Error((stderr || err.message || 'Git command failed').trim());
         error.stdout = stdout;
@@ -34,7 +43,10 @@ function parseStatus(raw) {
   let behind = 0;
 
   const match = branchLine.match(/^## (?:(.+?))(?:\.{3}(.+?))?(?: \[(.+)\])?$/);
-  if (match) {
+  if (!match) {
+    // Git status format changed or unparseable - return safe defaults
+    console.error('[git] Failed to parse git status branch line:', branchLine);
+  } else {
     branch = match[1];
     upstream = match[2] || null;
     if (match[3]) {

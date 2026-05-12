@@ -168,8 +168,6 @@
 //   • Command palette: Ctrl+Shift+P
 //
 // Configure AI: copy .env.example to .env and add your API key.
-
-console.log("Nightmare Code Console — Initialized 🩸");
 `;
   }
 

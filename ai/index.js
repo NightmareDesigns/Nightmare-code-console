@@ -5,6 +5,7 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
+const fetch = require('node-fetch');
 
 // ── Constants ──────────────────────────────────────────────
 const MAX_FILE_CONTENT_CHARS = 16000;
@@ -18,7 +19,17 @@ const ALLOWED_GEMINI_HOST = 'generativelanguage.googleapis.com';
 
 /**
  * Sanitize and validate that a user-supplied path stays inside the project root.
- * Returns the resolved absolute path on success, or null if access is denied.
+ * Prevents directory traversal attacks by resolving paths and checking they're within cwd.
+ *
+ * @param {string} userInput - User-provided path (relative or absolute)
+ * @returns {string|null} Absolute resolved path if valid, null if outside root or invalid
+ *
+ * @example
+ * safePath('../../../etc/passwd') // null - escapes root
+ * safePath('./src/index.js') // '/home/user/project/src/index.js'
+ * safePath(null) // null - invalid input
+ *
+ * @security Rejects null bytes, normalizes paths, and validates containment within cwd
  */
 function safePath(userInput) {
   if (!userInput || typeof userInput !== 'string') return null;
@@ -95,21 +106,29 @@ function toolRunBuild(command) {
 
 /**
  * Validate that a Gemini API URL points only to the official Gemini endpoint.
- * This prevents server-side request forgery via a user-supplied provider URL.
+ * Prevents server-side request forgery (SSRF) attacks via user-supplied provider URLs.
+ *
+ * @param {string} apiUrl - URL to validate
+ * @returns {boolean} True if URL is valid Gemini endpoint, false otherwise
+ *
+ * @security Only allows HTTPS requests to generativelanguage.googleapis.com
+ * @security Validates URL path matches expected Gemini API format
  */
 function validateGeminiUrl(apiUrl) {
   try {
     const u = new URL(apiUrl);
     if (u.hostname !== ALLOWED_GEMINI_HOST) return false;
     if (u.protocol !== 'https:') return false;
+    // Validate path starts with /v1beta/models/ to prevent same-host SSRF
+    if (!u.pathname.match(/^\/v1beta\/models\/[^\/]+:generateContent/)) return false;
     return true;
-  } catch {
+  } catch (err) {
     return false;
   }
 }
 
 // Gemini function declarations (tool definitions)
-const GEMINI_TOOLS = [{
+const GEMINI_TOOLS = Object.freeze([{
   functionDeclarations: [
     {
       name: 'list_files',
@@ -155,7 +174,7 @@ const GEMINI_TOOLS = [{
       },
     },
   ],
-}];
+}]);
 
 const DEFAULT_AI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const envMockFlag = process.env.AI_MOCK_MODE === 'true';
@@ -858,8 +877,6 @@ router.post('/chat', async (req, res) => {
       });
     }
 
-    const fetch = require('node-fetch');
-
     if (cfg.provider === 'gemini') {
       // Validate Gemini URL to prevent SSRF
       if (!validateGeminiUrl(cfg.apiUrl)) {
@@ -899,7 +916,12 @@ router.post('/chat', async (req, res) => {
 
         if (!response.ok) {
           const errText = await response.text();
-          console.error('Gemini API error:', response.status, errText);
+          console.error('[Gemini] API error:', {
+            status: response.status,
+            model: cfg.model,
+            iteration: iteration + 1,
+            error: errText.slice(0, 200)
+          });
           let errDetail = '';
           try {
             const errJson = JSON.parse(errText);
@@ -985,7 +1007,13 @@ router.post('/chat', async (req, res) => {
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('AI API error:', response.status, errText);
+      console.error('[AI] API error:', {
+        status: response.status,
+        provider: cfg.provider,
+        model: cfg.model,
+        url: cfg.apiUrl,
+        error: errText.slice(0, 200)
+      });
       let errDetail = '';
       try {
         const errJson = JSON.parse(errText);
@@ -1012,7 +1040,12 @@ router.post('/chat', async (req, res) => {
       provider: cfg.provider,
     });
   } catch (err) {
-    console.error('AI fetch error:', err.message);
+    console.error('[AI] Fetch error:', {
+      message: err.message,
+      code: err.code,
+      provider: cfg.provider,
+      model: cfg.model
+    });
     // Give a more helpful error when a local server is configured but unreachable
     if (cfg.isLocalEndpoint && (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND')) {
       return res.status(503).json({
