@@ -76,6 +76,70 @@ function toolCreateFile(filePath, content) {
   }
 }
 
+function toolDeleteFile(filePath) {
+  const cwd = process.cwd();
+  const target = safePath(filePath);
+  if (!target) return { error: 'Access denied' };
+  try {
+    const stat = fs.statSync(target);
+    if (stat.isDirectory()) return { error: 'Cannot delete directories with this tool' };
+    fs.unlinkSync(target);
+    return { success: true, path: path.relative(cwd, target) };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function toolSearchFiles(query, searchPath) {
+  if (!query || typeof query !== 'string') return { error: 'query is required' };
+  const cwd = process.cwd();
+  const target = safePath(searchPath || '.');
+  if (!target) return { error: 'Access denied' };
+
+  const results = [];
+  const maxResults = 50;
+  const maxFileSize = 512 * 1024; // 512 KB
+  const skipDirs = new Set(['node_modules', '.git', 'dist', 'build', '.cache', 'releases']);
+
+  function walk(dir) {
+    if (results.length >= maxResults) return;
+    let entries;
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      if (results.length >= maxResults) break;
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!skipDirs.has(entry.name) && !entry.name.startsWith('.')) walk(fullPath);
+        continue;
+      }
+      // Only search text files
+      const ext = path.extname(entry.name).toLowerCase();
+      const skipExts = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot', '.mp4', '.zip', '.gz', '.tar', '.exe', '.dll', '.so', '.dylib']);
+      if (skipExts.has(ext)) continue;
+      try {
+        const stat = fs.statSync(fullPath);
+        if (stat.size > maxFileSize) continue;
+        const content = fs.readFileSync(fullPath, 'utf8');
+        const lines = content.split('\n');
+        const qLow = query.toLowerCase();
+        lines.forEach((line, idx) => {
+          if (results.length >= maxResults) return;
+          if (line.toLowerCase().includes(qLow)) {
+            results.push({
+              file: path.relative(cwd, fullPath),
+              line: idx + 1,
+              text: line.trim().slice(0, 200),
+            });
+          }
+        });
+      } catch { /* skip unreadable files */ }
+    }
+  }
+
+  walk(target);
+  return { query, count: results.length, results };
+}
+
 function toolRunBuild(command) {
   const raw = (command || 'build').toLowerCase().trim().replace(/^npm\s+(run\s+)?/, '');
   const cmd = ALLOWED_BUILD_SCRIPTS.includes(raw) ? raw : null;
@@ -145,6 +209,29 @@ const GEMINI_TOOLS = [{
       },
     },
     {
+      name: 'delete_file',
+      description: 'Delete a file from the project workspace.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          path: { type: 'STRING', description: 'Relative path of the file to delete.' },
+        },
+        required: ['path'],
+      },
+    },
+    {
+      name: 'search_files',
+      description: 'Search for a text string or keyword across all project source files.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          query: { type: 'STRING', description: 'Text to search for in project files.' },
+          path: { type: 'STRING', description: 'Optional directory to limit search scope (defaults to project root).' },
+        },
+        required: ['query'],
+      },
+    },
+    {
       name: 'run_build',
       description: "Run a project npm script such as 'build', 'install', 'test', 'dev', 'lint', or 'start'.",
       parameters: {
@@ -156,6 +243,94 @@ const GEMINI_TOOLS = [{
     },
   ],
 }];
+
+// OpenAI function declarations (same tools, OpenAI format)
+const OPENAI_TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'list_files',
+      description: 'List files and directories inside the Nightmare Code Console project workspace.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Directory path to list (relative to project root; defaults to project root).' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'read_file',
+      description: 'Read the full contents of a file inside the project workspace.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Relative or absolute path to the file to read.' },
+        },
+        required: ['path'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_file',
+      description: 'Create a new code file (or overwrite an existing one) inside the project workspace.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Relative path of the file to create, e.g. src/utils/helper.js' },
+          content: { type: 'string', description: 'Full file content to write.' },
+        },
+        required: ['path', 'content'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_file',
+      description: 'Delete a file from the project workspace.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Relative path of the file to delete.' },
+        },
+        required: ['path'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_files',
+      description: 'Search for a text string or keyword across all project source files.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Text to search for in project files.' },
+          path: { type: 'string', description: 'Optional directory to limit search scope.' },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'run_build',
+      description: "Run a project npm script such as 'build', 'install', 'test', 'dev', 'lint', or 'start'.",
+      parameters: {
+        type: 'object',
+        properties: {
+          command: { type: 'string', description: "npm script name to run: 'build', 'install', 'test', 'dev', 'lint', 'start'." },
+        },
+      },
+    },
+  },
+];
 
 const DEFAULT_AI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const envMockFlag = process.env.AI_MOCK_MODE === 'true';
@@ -283,7 +458,15 @@ function resolveConfig(body = {}) {
 // System prompt that gives the AI context about the Nightmare Code Console
 const SYSTEM_PROMPT = `You are NightmareAI, an advanced coding assistant built into the Nightmare Code Console — a dark-themed, horror-inspired AI-powered code editor. You help developers write, debug, review, and understand code across all programming languages. You are knowledgeable, precise, and embrace a gothic aesthetic. Always format code with proper markdown code blocks using the appropriate language identifier. Provide clear explanations with actionable advice. When debugging, identify root causes and suggest fixes. When writing code, follow best practices and include inline comments for complex logic.
 
-When using the Gemini provider you have access to powerful workspace tools: list_files(path) to browse the project file tree, read_file(path) to read any project file, create_file(path, content) to create new code pages/files, and run_build(command) to trigger npm scripts. Use these tools proactively: when asked to create a file always call create_file; when asked to build always call run_build; when asked to analyze the project use list_files then read_file on relevant files.`;
+You have access to powerful workspace tools that work across all AI providers:
+- list_files(path): browse the project file tree
+- read_file(path): read any project file
+- create_file(path, content): create new code files
+- delete_file(path): delete a file from the project
+- search_files(query, path): search for text across all project source files
+- run_build(command): trigger npm scripts (build/test/install/lint/dev/start)
+
+Use these tools proactively: when asked to create a file always call create_file; when asked to build always call run_build; when asked to find something use search_files; when asked to analyze the project use list_files then read_file on relevant files.`;
 
 // Mock responses for demo mode
 const MOCK_SNIPPETS = [
@@ -952,6 +1135,13 @@ router.post('/chat', async (req, res) => {
             if (result.success) {
               collectedToolActions.push({ type: 'file_created', path: result.path, content: args.content });
             }
+          } else if (name === 'delete_file') {
+            result = toolDeleteFile(args && args.path);
+            if (result.success) {
+              collectedToolActions.push({ type: 'file_deleted', path: result.path });
+            }
+          } else if (name === 'search_files') {
+            result = toolSearchFiles(args && args.query, args && args.path);
           } else if (name === 'run_build') {
             result = await toolRunBuild(args && args.command);
             collectedToolActions.push({ type: 'build_result', success: result.success, stdout: result.stdout, stderr: result.stderr });
@@ -968,49 +1158,110 @@ router.post('/chat', async (req, res) => {
       return res.status(502).json({ error: 'Gemini function-calling loop exceeded maximum iterations' });
     }
 
+    // ── OpenAI-compatible providers with function calling ────────────────
     const headers = { 'Content-Type': 'application/json' };
     if (cfg.apiKey) {
-      headers['Authorization'] = `Bearer ${cfg.apiKey}`;
+      headers['Authorization'] = `******`;
     }
-    const response = await fetch(cfg.apiUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
+
+    // Use function calling for known OpenAI-compatible providers
+    const supportsTools = ['openai', 'copilot', 'tabby', 'local'].includes(cfg.provider);
+    const openaiCollectedActions = [];
+    let openaiMessages = [...apiMessages];
+
+    for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+      const reqBody = {
         model: cfg.model,
-        messages: apiMessages,
+        messages: openaiMessages,
         temperature: 0.7,
         max_tokens: 2048,
-      }),
-    });
+      };
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('AI API error:', response.status, errText);
-      let errDetail = '';
-      try {
-        const errJson = JSON.parse(errText);
-        errDetail = (errJson.error && (errJson.error.message || errJson.error.code)) ||
-                    (typeof errJson.error === 'string' ? errJson.error : '') || '';
-      } catch { /* ignore parse errors */ }
-      const errMsg = errDetail || errText.slice(0, 300) || `HTTP ${response.status}`;
-      return res.status(502).json({ error: `AI API error: ${errMsg}` });
+      if (supportsTools) {
+        reqBody.tools = OPENAI_TOOLS;
+        reqBody.tool_choice = 'auto';
+      }
+
+      const response = await fetch(cfg.apiUrl, { method: 'POST', headers, body: JSON.stringify(reqBody) });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error('AI API error:', response.status, errText);
+        let errDetail = '';
+        try {
+          const errJson = JSON.parse(errText);
+          errDetail = (errJson.error && (errJson.error.message || errJson.error.code)) ||
+                      (typeof errJson.error === 'string' ? errJson.error : '') || '';
+        } catch { /* ignore parse errors */ }
+        const errMsg = errDetail || errText.slice(0, 300) || `HTTP ${response.status}`;
+        return res.status(502).json({ error: `AI API error: ${errMsg}` });
+      }
+
+      const data = await response.json();
+      const choice = data.choices && data.choices[0];
+      const message = choice && choice.message;
+      if (!message) {
+        return res.status(502).json({ error: 'Invalid AI API response' });
+      }
+
+      // No tool calls — final answer
+      if (!message.tool_calls || message.tool_calls.length === 0) {
+        return res.json({
+          role: message.role,
+          content: message.content,
+          mock: false,
+          mode: cfg.mode,
+          apiUrl: cfg.apiUrl,
+          model: cfg.model,
+          provider: cfg.provider,
+          toolActions: openaiCollectedActions.length ? openaiCollectedActions : undefined,
+        });
+      }
+
+      // Append assistant message with tool calls, then execute them
+      openaiMessages = [...openaiMessages, message];
+      const toolResultMessages = [];
+
+      for (const toolCall of message.tool_calls) {
+        const name = toolCall.function && toolCall.function.name;
+        let args = {};
+        try { args = JSON.parse(toolCall.function.arguments || '{}'); } catch { /* ignore */ }
+
+        let result;
+        if (name === 'list_files') {
+          result = toolListFiles(args.path);
+        } else if (name === 'read_file') {
+          result = toolReadFile(args.path);
+        } else if (name === 'create_file') {
+          result = toolCreateFile(args.path, args.content);
+          if (result.success) {
+            openaiCollectedActions.push({ type: 'file_created', path: result.path });
+          }
+        } else if (name === 'delete_file') {
+          result = toolDeleteFile(args.path);
+          if (result.success) {
+            openaiCollectedActions.push({ type: 'file_deleted', path: result.path });
+          }
+        } else if (name === 'search_files') {
+          result = toolSearchFiles(args.query, args.path);
+        } else if (name === 'run_build') {
+          result = await toolRunBuild(args.command);
+          openaiCollectedActions.push({ type: 'build_result', success: result.success, stdout: result.stdout, stderr: result.stderr });
+        } else {
+          result = { error: `Unknown tool: ${name}` };
+        }
+
+        toolResultMessages.push({
+          role: 'tool',
+          tool_call_id: toolCall.id,
+          content: JSON.stringify(result),
+        });
+      }
+
+      openaiMessages = [...openaiMessages, ...toolResultMessages];
     }
 
-    const data = await response.json();
-    const message = data.choices && data.choices[0] && data.choices[0].message;
-    if (!message) {
-      return res.status(502).json({ error: 'Invalid AI API response' });
-    }
-
-    res.json({
-      role: message.role,
-      content: message.content,
-      mock: false,
-      mode: cfg.mode,
-      apiUrl: cfg.apiUrl,
-      model: cfg.model,
-      provider: cfg.provider,
-    });
+    return res.status(502).json({ error: 'AI function-calling loop exceeded maximum iterations' });
   } catch (err) {
     console.error('AI fetch error:', err.message);
     // Give a more helpful error when a local server is configured but unreachable
@@ -1088,6 +1339,22 @@ router.post('/tools/build', async (req, res) => {
   const { command } = req.body || {};
   const result = await toolRunBuild(command || 'build');
   if (result.error && !result.stdout) return res.status(400).json(result);
+  res.json(result);
+});
+
+// GET /api/ai/tools/search?q=<query>&path=<dir>  — search file contents
+router.get('/tools/search', (req, res) => {
+  if (!req.query.q) return res.status(400).json({ error: 'q query parameter is required' });
+  const result = toolSearchFiles(req.query.q, req.query.path || '');
+  if (result.error) return res.status(500).json(result);
+  res.json(result);
+});
+
+// DELETE /api/ai/tools/file?path=<file>  — delete a project file
+router.delete('/tools/file', (req, res) => {
+  if (!req.query.path) return res.status(400).json({ error: 'path query parameter is required' });
+  const result = toolDeleteFile(req.query.path);
+  if (result.error) return res.status(result.error === 'Access denied' ? 403 : 500).json(result);
   res.json(result);
 });
 

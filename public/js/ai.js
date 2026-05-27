@@ -19,6 +19,8 @@
   const gtListFilesBtn   = document.getElementById('gtListFilesBtn');
   const gtReadFileBtn    = document.getElementById('gtReadFileBtn');
   const gtCreateFileBtn  = document.getElementById('gtCreateFileBtn');
+  const gtSearchFilesBtn = document.getElementById('gtSearchFilesBtn');
+  const gtDeleteFileBtn  = document.getElementById('gtDeleteFileBtn');
   const gtBuildBtn       = document.getElementById('gtBuildBtn');
   const gtAnalyzeBtn     = document.getElementById('gtAnalyzeBtn');
 
@@ -50,10 +52,11 @@
     if (title) badge.title = title;
   }
 
-  // Show / hide Gemini tools bar depending on provider
+  // Show / hide AI tools bar depending on provider (show for all live providers)
   function updateGeminiToolsVisibility(provider) {
     if (!geminiToolsBar) return;
-    geminiToolsBar.style.display = (provider === 'gemini') ? 'flex' : 'none';
+    const hiddenProviders = ['builtin'];
+    geminiToolsBar.style.display = hiddenProviders.includes(provider) ? 'none' : 'flex';
   }
 
   // Fetch AI config on load
@@ -251,8 +254,11 @@
     if (!Array.isArray(toolActions)) return;
     for (const action of toolActions) {
       if (action.type === 'file_created') {
-        appendToolNotice(`✅ **Gemini created file:** \`${action.path}\``, 'success', action.path);
+        appendToolNotice(`✅ **AI created file:** \`${action.path}\``, 'success', action.path);
         // Refresh file tree
+        if (window.NightmareApp && window.NightmareApp.loadFileTree) window.NightmareApp.loadFileTree();
+      } else if (action.type === 'file_deleted') {
+        appendToolNotice(`🗑️ **AI deleted file:** \`${action.path}\``, 'warn', null);
         if (window.NightmareApp && window.NightmareApp.loadFileTree) window.NightmareApp.loadFileTree();
       } else if (action.type === 'build_result') {
         const icon = action.success ? '✅' : '⚠️';
@@ -261,10 +267,10 @@
         // Write build output to the terminal / console
         const output = [action.stdout, action.stderr].filter(Boolean).join('\n');
         if (output && window.NightmareApp && window.NightmareApp.logToConsole) {
-          window.NightmareApp.logToConsole(`[Gemini Build]\n${output}`, action.success ? 'log' : 'warn');
+          window.NightmareApp.logToConsole(`[AI Build]\n${output}`, action.success ? 'log' : 'warn');
         }
         if (output && window.NightmareTerminal) {
-          window.NightmareTerminal.writeln('\x1b[33m[Gemini Build Output]\x1b[0m');
+          window.NightmareTerminal.writeln('\x1b[33m[AI Build Output]\x1b[0m');
           output.split('\n').forEach((line) => window.NightmareTerminal.writeln(line));
           window.NightmareTerminal.write('\x1b[32m$ \x1b[0m');
         }
@@ -445,12 +451,72 @@
     send();
   }
 
-  // ── Gemini tool button event listeners ────────────────────
-  if (gtListFilesBtn)  gtListFilesBtn.addEventListener('click',  geminiListFiles);
-  if (gtReadFileBtn)   gtReadFileBtn.addEventListener('click',   geminiReadFile);
-  if (gtCreateFileBtn) gtCreateFileBtn.addEventListener('click', geminiCreateFile);
-  if (gtBuildBtn)      gtBuildBtn.addEventListener('click',      geminiBuild);
-  if (gtAnalyzeBtn)    gtAnalyzeBtn.addEventListener('click',    geminiAnalyzeProject);
+  async function aiSearchFiles() {
+    const query = prompt('Search term (searches all file contents):');
+    if (!query) return;
+    const searchPath = prompt('Search in directory (leave blank for whole project):', '') || '';
+
+    appendMessage('user', `🔍 Searching files for: \`${query}\``);
+    history.push({ role: 'user', content: `Search project files for: ${query}` });
+    const { bubble: thinkingBubble } = appendMessage('assistant', '', true);
+
+    try {
+      const params = new URLSearchParams({ q: query });
+      if (searchPath) params.set('path', searchPath);
+      const resp = await fetch(`/api/ai/tools/search?${params}`);
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+
+      const results = data.results || [];
+      if (results.length === 0) {
+        thinkingBubble.innerHTML = renderMarkdown(`🔍 No results found for \`${query}\``);
+        history.push({ role: 'assistant', content: `No results found for \`${query}\`` });
+        return;
+      }
+
+      const lines = results.map((r) => `**${r.file}:${r.line}** — \`${r.text.trim()}\``);
+      const reply = `🔍 Found **${results.length}** match${results.length !== 1 ? 'es' : ''} for \`${query}\`:\n\n${lines.join('\n')}`;
+      thinkingBubble.innerHTML = renderMarkdown(reply);
+      highlightCode(thinkingBubble);
+      history.push({ role: 'assistant', content: reply });
+    } catch (err) {
+      thinkingBubble.innerHTML = `<span style="color:#ff6b6b">⚠ Search error: ${escHtml(err.message)}</span>`;
+    }
+    if (input) input.focus();
+  }
+
+  async function aiDeleteFile() {
+    const filePath = prompt('File path to delete:');
+    if (!filePath) return;
+    if (!confirm(`Are you sure you want to permanently delete \`${filePath}\`?`)) return;
+
+    appendMessage('user', `🗑️ Deleting file: \`${filePath}\``);
+    history.push({ role: 'user', content: `Delete file: ${filePath}` });
+    const { bubble: thinkingBubble } = appendMessage('assistant', '', true);
+
+    try {
+      const resp = await fetch(`/api/ai/tools/file?path=${encodeURIComponent(filePath)}`, { method: 'DELETE' });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+
+      const reply = `🗑️ **File deleted:** \`${data.path || filePath}\``;
+      thinkingBubble.innerHTML = renderMarkdown(reply);
+      history.push({ role: 'assistant', content: reply });
+      if (window.NightmareApp && window.NightmareApp.loadFileTree) window.NightmareApp.loadFileTree();
+    } catch (err) {
+      thinkingBubble.innerHTML = `<span style="color:#ff6b6b">⚠ Delete error: ${escHtml(err.message)}</span>`;
+    }
+    if (input) input.focus();
+  }
+
+  // ── AI tool button event listeners ────────────────────────
+  if (gtListFilesBtn)   gtListFilesBtn.addEventListener('click',   geminiListFiles);
+  if (gtReadFileBtn)    gtReadFileBtn.addEventListener('click',    geminiReadFile);
+  if (gtCreateFileBtn)  gtCreateFileBtn.addEventListener('click',  geminiCreateFile);
+  if (gtSearchFilesBtn) gtSearchFilesBtn.addEventListener('click', aiSearchFiles);
+  if (gtDeleteFileBtn)  gtDeleteFileBtn.addEventListener('click',  aiDeleteFile);
+  if (gtBuildBtn)       gtBuildBtn.addEventListener('click',       geminiBuild);
+  if (gtAnalyzeBtn)     gtAnalyzeBtn.addEventListener('click',     geminiAnalyzeProject);
 
   // ── Event listeners ────────────────────────────────────────
   if (sendBtn) sendBtn.addEventListener('click', send);
