@@ -172,6 +172,23 @@ function validateGeminiUrl(apiUrl) {
   }
 }
 
+// Validate OpenAI-compatible API URLs to prevent SSRF.
+// Allows HTTPS to any external host, or HTTP only to localhost/LAN for local models.
+function validateOpenAIUrl(apiUrl) {
+  try {
+    const u = new URL(apiUrl);
+    if (u.protocol === 'https:') return true;
+    if (u.protocol === 'http:') {
+      // Allow local/LAN endpoints only
+      const isLocal = /^(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)$/.test(u.hostname);
+      return isLocal;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 // Gemini function declarations (tool definitions)
 const GEMINI_TOOLS = [{
   functionDeclarations: [
@@ -1159,6 +1176,11 @@ router.post('/chat', async (req, res) => {
     }
 
     // ── OpenAI-compatible providers with function calling ────────────────
+    // Validate URL to prevent SSRF before making requests
+    if (!validateOpenAIUrl(cfg.apiUrl)) {
+      return res.status(400).json({ error: 'Invalid API URL — must be HTTPS for external endpoints or HTTP for local endpoints only' });
+    }
+
     const headers = { 'Content-Type': 'application/json' };
     if (cfg.apiKey) {
       headers['Authorization'] = `******`;

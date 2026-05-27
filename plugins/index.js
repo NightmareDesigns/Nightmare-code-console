@@ -83,7 +83,7 @@ const LANGUAGE_PLUGINS = [
   { id: 'cypher', name: 'Cypher (Neo4j)', language: 'cypher', icon: '🕸️', category: 'Data', extensions: ['.cypher', '.cql'] },
   // Data Science
   { id: 'r', name: 'R', language: 'r', icon: '📊', category: 'Data Science', extensions: ['.r', '.R', '.Rmd'] },
-  { id: 'matlab', name: 'MATLAB', language: 'plaintext', icon: '📊', category: 'Data Science', extensions: ['.mat'] },
+  { id: 'matlab', name: 'MATLAB', language: 'plaintext', icon: '📊', category: 'Data Science', extensions: ['.mlx', '.p'] },
   // Mobile
   { id: 'dart', name: 'Dart', language: 'dart', icon: '🎯', category: 'Mobile', extensions: ['.dart'] },
   // Blockchain / Smart Contracts
@@ -92,8 +92,8 @@ const LANGUAGE_PLUGINS = [
   { id: 'systemverilog', name: 'SystemVerilog', language: 'systemverilog', icon: '🔌', category: 'Hardware', extensions: ['.sv', '.svh', '.v', '.vh'] },
   { id: 'assembly', name: 'Assembly (MIPS)', language: 'mips', icon: '⚙️', category: 'Hardware', extensions: ['.asm', '.s', '.S'] },
   { id: 'vhdl', name: 'VHDL', language: 'plaintext', icon: '🔌', category: 'Hardware', extensions: ['.vhd', '.vhdl'] },
-  { id: 'fortran', name: 'Fortran', language: 'plaintext', icon: '🔢', category: 'Hardware', extensions: ['.f90', '.f95', '.f03', '.f08', '.f', '.for', '.ftn'] },
-  { id: 'cobol', name: 'COBOL', language: 'plaintext', icon: '🏛️', category: 'Hardware', extensions: ['.cbl', '.cob', '.cobol', '.cpy'] },
+  { id: 'fortran', name: 'Fortran', language: 'plaintext', icon: '🔢', category: 'Data Science', extensions: ['.f90', '.f95', '.f03', '.f08', '.f', '.for', '.ftn'] },
+  { id: 'cobol', name: 'COBOL', language: 'plaintext', icon: '🏛️', category: 'Backend', extensions: ['.cbl', '.cob', '.cobol', '.cpy'] },
   { id: 'ada', name: 'Ada', language: 'plaintext', icon: '🏛️', category: 'Hardware', extensions: ['.ads', '.adb'] },
   // Other
   { id: 'plaintext', name: 'Plain Text', language: 'plaintext', icon: '📄', category: 'Other', extensions: ['.txt', '.text', '.log'] },

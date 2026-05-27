@@ -390,15 +390,15 @@ console.log("Nightmare Code Console — Initialized 🩸");
       rust: '🦀', php: '🐘', ruby: '💎', swift: '🍎', kotlin: '🟣',
       shell: '🐚', powershell: '🔷', lua: '🌙', sql: '🗄️',
       dockerfile: '🐳', r: '📊', dart: '🎯', graphql: '🔗',
-      fsharp: '🔵', vb: '🔵', clojure: '🟢', julia: '🟣',
-      solidity: '🔷', coffeescript: '☕', handlebars: '🔧', pug: '🐾',
+      fsharp: '🟣', vb: '🔵', clojure: '🟢', julia: '🟣',
+      solidity: '⬡', coffeescript: '☕', handlebars: '🖐️', pug: '🐾',
       svelte: '🔶', vue: '💚', twig: '🌿', liquid: '💧',
       proto: '📡', redis: '🔴', pgsql: '🐘', mysql: '🐬',
-      razor: '🔪', apex: '⚡', bicep: '💪', hcl: '🏗️',
-      perl: '🐪', scala: '🔴', elixir: '💜', erlang: '🔴',
-      nim: '⭐', zig: '⚡', fortran: '🔢', cobol: '📟',
-      bat: '🪟', azcli: '☁️', sparql: '🔗', wgsl: '🎮',
-      cypher: '🔗', mips: '⚙️', systemverilog: '⚙️', vhdl: '⚙️',
+      razor: '💙', apex: '☁️', bicep: '💪', hcl: '🏗️',
+      perl: '🐪', scala: '🔴', elixir: '💜', erlang: '📡',
+      nim: '👑', zig: '⚡', fortran: '🔢', cobol: '📟',
+      bat: '🖥️', azcli: '☁️', sparql: '🔗', wgsl: '🖥️',
+      cypher: '🕸️', mips: '⚙️', systemverilog: '⚙️', vhdl: '⚙️',
     };
     return icons[lang] || '📄';
   }
