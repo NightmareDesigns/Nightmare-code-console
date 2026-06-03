@@ -583,7 +583,7 @@
     }
 
     if (provider === 'local') {
-      if (!hasModel && localAiModelInput) localAiModelInput.value = localAiModelInput.value || 'qwen2.5-coder:3b';
+      if (!hasModel && localAiModelInput) localAiModelInput.value = 'qwen2.5-coder:3b';
       if (providerHint) providerHint.textContent = 'Local mode uses the server URL and model below instead of a cloud endpoint.';
       if (aiApiKeyInput) aiApiKeyInput.placeholder = 'API key (optional for local)';
       if (aiApiUrlInput) aiApiUrlInput.placeholder = 'Managed by local mode';
