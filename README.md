@@ -180,7 +180,7 @@ Supports any OpenAI-compatible endpoint — change `AI_API_URL` and `AI_MODEL` i
 ## ⎇ Source Control Panel
 
 - Open the **Git** tab to see branch, upstream, ahead/behind counts, and changed files.
-- Use **Refresh** to resync status, **Fetch/Pull/Push** for remote updates, and **Stage & Commit** with a message to record changes.
+- Use **Refresh** to resync status, **Fetch/Pull/Push** for remote updates, **Update app** to auto fetch+pull+install+build in one click, and **Stage & Commit** with a message to record changes.
 - Set your upstream (e.g., `origin/main`) before pulling or pushing. If credentials are required, the underlying git command will prompt/return an error in the panel.
 If you set `AI_GEMINI_API_KEY` and leave `AI_PROVIDER` unset, the server will default to Gemini automatically (handy for Windows builds with a `.env` beside the EXE).
 
