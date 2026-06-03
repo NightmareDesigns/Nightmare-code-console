@@ -1150,7 +1150,7 @@
 
   async function runGitUpdater() {
     if (gitBusy) return;
-    const confirmed = window.confirm('Run updater now? This will fetch, pull, install dependencies, and rebuild assets.');
+    const confirmed = window.confirm('Run updater now? This may take a few minutes and can briefly interrupt the app while it fetches, pulls, installs dependencies, and rebuilds assets.');
     if (!confirmed) return;
     setGitUiDisabled(true);
     try {
