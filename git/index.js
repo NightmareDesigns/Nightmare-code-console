@@ -35,7 +35,11 @@ function runNpm(args) {
   return new Promise((resolve, reject) => {
     execFile(NPM_BIN, args, { cwd: REPO_CWD, timeout: NPM_TIMEOUT_MS }, (err, stdout = '', stderr = '') => {
       if (err) {
-        const error = new Error((stderr || stdout || err.message || 'npm command failed').trim());
+        const message = [err.message, stderr.trim(), stdout.trim()]
+          .filter(Boolean)
+          .join('\n')
+          .trim() || 'npm command failed';
+        const error = new Error(message);
         error.stdout = stdout;
         error.stderr = stderr;
         return reject(error);
@@ -220,7 +224,7 @@ router.post('/update', async (req, res) => {
     const { stdout: pullOut } = await runGit(['pull', '--ff-only']);
     appendStepOutput(steps, pullOut);
 
-    const { stdout: installOut } = await runNpm(['ci', '--no-audit', '--no-fund']);
+    const { stdout: installOut } = await runNpm(['ci', '--prefer-offline', '--no-audit', '--no-fund']);
     appendStepOutput(steps, installOut);
 
     const { stdout: buildOut } = await runNpm(['run', 'build', '--if-present']);
