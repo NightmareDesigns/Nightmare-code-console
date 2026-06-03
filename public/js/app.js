@@ -1146,24 +1146,24 @@
     } finally {
       setGitUiDisabled(false);
     }
+  }
 
-    async function runGitUpdater() {
-      if (gitBusy) return;
-      const confirmed = window.confirm('Run updater now? This will fetch, pull, install dependencies, and rebuild assets.');
-      if (!confirmed) return;
-      setGitUiDisabled(true);
-      try {
-        const resp = await fetch('/api/git/update', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || 'Updater failed');
-        setGitStatus(data.summary || 'Updater finished');
-        await loadGitStatus(false);
-        await loadGitLog();
-      } catch (err) {
-        setGitStatus(err.message || 'Updater failed', true);
-      } finally {
-        setGitUiDisabled(false);
-      }
+  async function runGitUpdater() {
+    if (gitBusy) return;
+    const confirmed = window.confirm('Run updater now? This will fetch, pull, install dependencies, and rebuild assets.');
+    if (!confirmed) return;
+    setGitUiDisabled(true);
+    try {
+      const resp = await fetch('/api/git/update', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Updater failed');
+      setGitStatus(data.summary || 'Updater finished');
+      await loadGitStatus(false);
+      await loadGitLog();
+    } catch (err) {
+      setGitStatus(err.message || 'Updater failed', true);
+    } finally {
+      setGitUiDisabled(false);
     }
   }
 

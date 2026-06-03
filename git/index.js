@@ -113,6 +113,11 @@ async function hasUncommittedChanges() {
   return Boolean(stdout.trim());
 }
 
+function appendStepOutput(steps, output) {
+  const trimmed = String(output || '').trim();
+  if (trimmed) steps.push(trimmed);
+}
+
 router.get('/status', async (req, res) => {
   try {
     await ensureRepo();
@@ -210,16 +215,16 @@ router.post('/update', async (req, res) => {
 
     const steps = [];
     const { stdout: fetchOut } = await runGit(['fetch']);
-    if (fetchOut.trim()) steps.push(fetchOut.trim());
+    appendStepOutput(steps, fetchOut);
 
     const { stdout: pullOut } = await runGit(['pull', '--ff-only']);
-    if (pullOut.trim()) steps.push(pullOut.trim());
+    appendStepOutput(steps, pullOut);
 
-    const { stdout: installOut } = await runNpm(['install', '--no-audit', '--no-fund']);
-    if (installOut.trim()) steps.push(installOut.trim());
+    const { stdout: installOut } = await runNpm(['ci', '--no-audit', '--no-fund']);
+    appendStepOutput(steps, installOut);
 
     const { stdout: buildOut } = await runNpm(['run', 'build', '--if-present']);
-    if (buildOut.trim()) steps.push(buildOut.trim());
+    appendStepOutput(steps, buildOut);
 
     return res.json({
       success: true,
