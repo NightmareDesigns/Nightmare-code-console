@@ -509,7 +509,7 @@
     if (aiApiUrlInput) aiApiUrlInput.disabled = isBuiltin || isLocal;
 
     if (aiAdvancedDetails) {
-      aiAdvancedDetails.open = !isBuiltin;
+      if (isBuiltin) aiAdvancedDetails.open = false;
     }
   }
 
@@ -517,8 +517,10 @@
     if (!aiApiUrlInput || !aiApiModelInput) return;
     const currentUrl = aiApiUrlInput.value.trim();
     const currentModel = aiApiModelInput.value.trim();
+    const currentLocalModel = localAiModelInput ? localAiModelInput.value.trim() : '';
     const hasUrl = currentUrl.length > 0;
     const hasModel = currentModel.length > 0;
+    const hasLocalModel = currentLocalModel.length > 0;
     if (aiApiKeyInput) aiApiKeyInput.disabled = false;
     if (aiApiUrlInput) aiApiUrlInput.disabled = false;
     if (aiApiModelInput) aiApiModelInput.disabled = false;
@@ -583,7 +585,7 @@
     }
 
     if (provider === 'local') {
-      if (!hasModel && localAiModelInput) localAiModelInput.value = 'qwen2.5-coder:3b';
+      if ((!hasLocalModel || overwriteDefaults) && localAiModelInput) localAiModelInput.value = 'qwen2.5-coder:3b';
       if (providerHint) providerHint.textContent = 'Local mode uses the server URL and model below instead of a cloud endpoint.';
       if (aiApiKeyInput) aiApiKeyInput.placeholder = 'API key (optional for local)';
       if (aiApiUrlInput) aiApiUrlInput.placeholder = 'Managed by local mode';
