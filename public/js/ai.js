@@ -12,6 +12,7 @@
   const clearBtn = document.getElementById('clearChatBtn');
   const badge = document.getElementById('aiBadge');
   const statusMsg = document.getElementById('statusMsg');
+  const quickActionButtons = Array.from(document.querySelectorAll('[data-ai-prompt]'));
 
   // Gemini tool buttons
   const geminiToolsBar   = document.getElementById('geminiToolsBar');
@@ -367,6 +368,12 @@
     if (input) input.focus();
   }
 
+  function triggerQuickAction(promptText) {
+    if (!input || !promptText) return;
+    input.value = promptText;
+    send();
+  }
+
   // ── Gemini tool button actions ─────────────────────────────
 
   async function geminiListFiles() {
@@ -453,6 +460,9 @@
 
   // ── Event listeners ────────────────────────────────────────
   if (sendBtn) sendBtn.addEventListener('click', send);
+  quickActionButtons.forEach((button) => {
+    button.addEventListener('click', () => triggerQuickAction(button.dataset.aiPrompt || ''));
+  });
 
   if (input) {
     input.addEventListener('keydown', (e) => {
