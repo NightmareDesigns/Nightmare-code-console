@@ -6,7 +6,9 @@ const router = express.Router();
 
 // ── Constants ──────────────────────────────────────────────
 const GIT_TIMEOUT_MS = 30000; // 30 second timeout for git operations
+const NPM_TIMEOUT_MS = 5 * 60 * 1000; // 5 minute timeout for npm operations
 const REPO_CWD = process.cwd();
+const NPM_BIN = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 /**
  * Execute a git command with timeout and error handling.
@@ -20,6 +22,20 @@ function runGit(args) {
     execFile('git', args, { cwd: REPO_CWD, timeout: GIT_TIMEOUT_MS }, (err, stdout = '', stderr = '') => {
       if (err) {
         const error = new Error((stderr || err.message || 'Git command failed').trim());
+        error.stdout = stdout;
+        error.stderr = stderr;
+        return reject(error);
+      }
+      resolve({ stdout, stderr });
+    });
+  });
+}
+
+function runNpm(args) {
+  return new Promise((resolve, reject) => {
+    execFile(NPM_BIN, args, { cwd: REPO_CWD, timeout: NPM_TIMEOUT_MS }, (err, stdout = '', stderr = '') => {
+      if (err) {
+        const error = new Error((stderr || stdout || err.message || 'npm command failed').trim());
         error.stdout = stdout;
         error.stderr = stderr;
         return reject(error);
@@ -90,6 +106,11 @@ async function getUpstreamRef() {
   } catch {
     return null;
   }
+}
+
+async function hasUncommittedChanges() {
+  const { stdout } = await runGit(['status', '--porcelain']);
+  return Boolean(stdout.trim());
 }
 
 router.get('/status', async (req, res) => {
@@ -167,6 +188,44 @@ router.post('/push', async (req, res) => {
     if (!upstream) args.push('-u', 'origin', 'HEAD');
     const { stdout } = await runGit(args);
     return res.json({ success: true, output: stdout.trim(), upstream: upstream || 'origin/HEAD' });
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/update', async (req, res) => {
+  try {
+    await ensureRepo();
+
+    if (await hasUncommittedChanges()) {
+      return res.status(400).json({
+        error: 'Working tree has uncommitted changes. Commit or stash before running updater.',
+      });
+    }
+
+    const upstream = await getUpstreamRef();
+    if (!upstream) {
+      return res.status(400).json({ error: 'No upstream branch set. Set upstream before updating.' });
+    }
+
+    const steps = [];
+    const { stdout: fetchOut } = await runGit(['fetch']);
+    if (fetchOut.trim()) steps.push(fetchOut.trim());
+
+    const { stdout: pullOut } = await runGit(['pull', '--ff-only']);
+    if (pullOut.trim()) steps.push(pullOut.trim());
+
+    const { stdout: installOut } = await runNpm(['install', '--no-audit', '--no-fund']);
+    if (installOut.trim()) steps.push(installOut.trim());
+
+    const { stdout: buildOut } = await runNpm(['run', 'build', '--if-present']);
+    if (buildOut.trim()) steps.push(buildOut.trim());
+
+    return res.json({
+      success: true,
+      summary: 'Updater finished: pulled latest changes, installed dependencies, and rebuilt assets.',
+      output: steps.join('\n\n'),
+    });
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }

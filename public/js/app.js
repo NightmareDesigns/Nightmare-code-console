@@ -63,6 +63,7 @@
   const gitRefreshBtn  = document.getElementById('gitRefreshBtn');
   const gitFetchBtn    = document.getElementById('gitFetchBtn');
   const gitPullBtn     = document.getElementById('gitPullBtn');
+  const gitUpdateBtn   = document.getElementById('gitUpdateBtn');
   const gitPushBtn     = document.getElementById('gitPushBtn');
   const gitDeleteMergedBtn = document.getElementById('gitDeleteMergedBtn');
   const gitCommitBtn   = document.getElementById('gitCommitBtn');
@@ -1007,7 +1008,7 @@
 
   function setGitUiDisabled(disabled) {
     gitBusy = disabled;
-    [gitRefreshBtn, gitFetchBtn, gitPullBtn, gitPushBtn, gitDeleteMergedBtn, gitCommitBtn].forEach((btn) => {
+    [gitRefreshBtn, gitFetchBtn, gitPullBtn, gitUpdateBtn, gitPushBtn, gitDeleteMergedBtn, gitCommitBtn].forEach((btn) => {
       if (btn) btn.disabled = disabled;
     });
   }
@@ -1145,6 +1146,25 @@
     } finally {
       setGitUiDisabled(false);
     }
+
+    async function runGitUpdater() {
+      if (gitBusy) return;
+      const confirmed = window.confirm('Run updater now? This will fetch, pull, install dependencies, and rebuild assets.');
+      if (!confirmed) return;
+      setGitUiDisabled(true);
+      try {
+        const resp = await fetch('/api/git/update', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Updater failed');
+        setGitStatus(data.summary || 'Updater finished');
+        await loadGitStatus(false);
+        await loadGitLog();
+      } catch (err) {
+        setGitStatus(err.message || 'Updater failed', true);
+      } finally {
+        setGitUiDisabled(false);
+      }
+    }
   }
 
   async function commitChanges() {
@@ -1176,6 +1196,7 @@
   if (gitRefreshBtn) gitRefreshBtn.addEventListener('click', () => { loadGitStatus(true); loadGitLog(); });
   if (gitFetchBtn) gitFetchBtn.addEventListener('click', () => runGitAction('fetch'));
   if (gitPullBtn) gitPullBtn.addEventListener('click', () => runGitAction('pull'));
+  if (gitUpdateBtn) gitUpdateBtn.addEventListener('click', () => runGitUpdater());
   if (gitPushBtn) gitPushBtn.addEventListener('click', () => runGitAction('push'));
   if (gitDeleteMergedBtn) gitDeleteMergedBtn.addEventListener('click', () => cleanupMergedBranches());
   if (gitCommitBtn) gitCommitBtn.addEventListener('click', () => commitChanges());
