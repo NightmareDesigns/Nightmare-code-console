@@ -1,4 +1,4 @@
-# 🩸 Nightmare Code Console
+# 🩸 Nightmare Code Console 2.0
 
 > An AI-powered, horror-themed code editor inspired by VS Code and GitHub Codespaces — with a **Matrix rain** background, **blood drip** animations, and **NightmareAI** assistant built in.
 >
@@ -11,9 +11,10 @@
 | Feature | Details |
 |---------|---------|
 | 🖥️ **Monaco Editor** | The same engine powering VS Code — syntax highlighting, IntelliSense, 80+ languages |
-| 🤖 **NightmareAI** | Built-in MiniCoder (offline) plus OpenAI/Gemini/Copilot/Tabby/local providers with editor context awareness |
-| 🔑 **In-app AI Setup** | Enter API key, endpoint, and model right in Settings — no .env edits required |
+| 🤖 **NightmareAI 2.0** | Built-in MiniCoder (offline) plus OpenAI/Gemini/Copilot/Tabby/local providers with cleaner setup and editor context awareness |
+| 🔑 **Cleaner AI Setup** | One primary AI mode dropdown, an advanced connection panel, quick reset, and inline status summary |
 | 🧠 **Multi-provider AI** | Switch between OpenAI-compatible, Gemini, GitHub Copilot, Tabby, Local (Ollama/LM Studio), or the built-in offline model |
+| ⚡ **Quick AI Actions** | Fire off explain, bug-finding, refactor, and test-generation prompts with one click |
 | 🌧️ **Matrix Rain** | Animated green katakana/ASCII falling character background |
 | 🩸 **Blood Drip FX** | CSS/Canvas blood dripping animations along the top of the UI |
 | ⎇ **Source Control** | Git panel shows status, history, and lets you fetch/pull/push/commit without leaving the app |

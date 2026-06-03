@@ -173,7 +173,7 @@ app.post('/api/file', apiLimiter, (req, res) => {
 
 // Health check (light rate limit to prevent abuse)
 app.get('/api/health', apiLimiter, (req, res) => {
-  res.json({ status: 'ok', version: '1.0.0', name: 'Nightmare Code Console' });
+  res.json({ status: 'ok', version: '2.0.0', name: 'Nightmare Code Console' });
 });
 
 // Catch-all: serve the SPA

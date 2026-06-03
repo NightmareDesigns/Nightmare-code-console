@@ -36,16 +36,19 @@
   const bloodToggle    = document.getElementById('bloodToggle');
   const matrixSpeedRange = document.getElementById('matrixSpeedRange');
   const aiApiKeyInput  = document.getElementById('aiApiKeyInput');
-  const saveApiKeyBtn  = document.getElementById('saveApiKeyBtn');
   const aiProviderSelect = document.getElementById('aiProviderSelect');
   const aiApiUrlInput  = document.getElementById('aiApiUrlInput');
   const aiApiModelInput = document.getElementById('aiApiModelInput');
   const applyAiSettingsBtn = document.getElementById('applyAiSettingsBtn');
-  const localAiToggle  = document.getElementById('localAiToggle');
+  const resetAiSettingsBtn = document.getElementById('resetAiSettingsBtn');
   const localAiSettings = document.getElementById('localAiSettings');
+  const cloudAiFields = document.getElementById('cloudAiFields');
   const localAiUrlInput = document.getElementById('localAiUrlInput');
   const localAiModelInput = document.getElementById('localAiModelInput');
-  const saveLocalAiBtn = document.getElementById('saveLocalAiBtn');
+  const aiModeTitle = document.getElementById('aiModeTitle');
+  const aiModeDescription = document.getElementById('aiModeDescription');
+  const aiModeMeta = document.getElementById('aiModeMeta');
+  const aiAdvancedDetails = document.getElementById('aiAdvancedDetails');
   const addonNameInput = document.getElementById('addonNameInput');
   const addonLinkInput = document.getElementById('addonLinkInput');
   const addonRepoInput = document.getElementById('addonRepoInput');
@@ -83,6 +86,38 @@
   const defaultTabbyUrl = 'http://127.0.0.1:8080/v1/chat/completions';
   const defaultTabbyModel = 'TabbyML/StarCoder2-15B';
   const defaultBuiltinModel = 'nightmare-mini';
+  const aiModeDetails = {
+    builtin: {
+      title: 'Built-in Mini',
+      description: 'Private offline mode with no API key required.',
+      meta: 'Offline',
+    },
+    openai: {
+      title: 'OpenAI / Compatible',
+      description: 'Use OpenAI-style endpoints such as OpenAI, Groq, Together, or compatible gateways.',
+      meta: 'Cloud',
+    },
+    gemini: {
+      title: 'Gemini',
+      description: 'Google Gemini with auto-filled model endpoint support.',
+      meta: 'Cloud',
+    },
+    copilot: {
+      title: 'GitHub Copilot',
+      description: 'Connect your Copilot chat endpoint and token for GitHub-powered completions.',
+      meta: 'Cloud',
+    },
+    tabby: {
+      title: 'Tabby',
+      description: 'Self-hosted OpenAI-compatible endpoint for local team inference.',
+      meta: 'Self-hosted',
+    },
+    local: {
+      title: 'Local / Ollama',
+      description: 'Run AI on your own machine with Ollama or LM Studio.',
+      meta: 'Private local',
+    },
+  };
 
   // ── Sidebar panel switcher ─────────────────────────────────
   function activateSidebarPanel(panelId) {
@@ -265,7 +300,7 @@
         term.writeln(args.join(' '));
         break;
       case 'version':
-        term.writeln('\x1b[32mNightmare Code Console v1.0.0\x1b[0m');
+        term.writeln('\x1b[32mNightmare Code Console v2.0.0\x1b[0m');
         break;
       case 'ls': {
         const lsPath = args[0] || '';
@@ -457,6 +492,27 @@
     if (title) badge.title = title;
   }
 
+  function updateAiModeSummary(provider) {
+    const details = aiModeDetails[provider] || aiModeDetails.openai;
+    if (aiModeTitle) aiModeTitle.textContent = details.title;
+    if (aiModeDescription) aiModeDescription.textContent = details.description;
+    if (aiModeMeta) aiModeMeta.textContent = details.meta;
+  }
+
+  function updateAiSettingsVisibility(provider) {
+    const isBuiltin = provider === 'builtin';
+    const isLocal = provider === 'local';
+
+    if (cloudAiFields) cloudAiFields.hidden = isBuiltin || isLocal;
+    if (localAiSettings) localAiSettings.hidden = !isLocal;
+    if (aiApiKeyInput) aiApiKeyInput.disabled = isBuiltin;
+    if (aiApiUrlInput) aiApiUrlInput.disabled = isBuiltin || isLocal;
+
+    if (aiAdvancedDetails) {
+      aiAdvancedDetails.open = !isBuiltin;
+    }
+  }
+
   function applyProviderPreset(provider, overwriteDefaults = false) {
     if (!aiApiUrlInput || !aiApiModelInput) return;
     const currentUrl = aiApiUrlInput.value.trim();
@@ -471,6 +527,8 @@
       if (!overwriteDefaults) return false;
       return fallbacks.includes(currentUrl);
     };
+    updateAiModeSummary(provider);
+    updateAiSettingsVisibility(provider);
 
     if (provider === 'builtin') {
       if (aiApiModelInput && (!hasModel || overwriteDefaults)) {
@@ -525,10 +583,10 @@
     }
 
     if (provider === 'local') {
-      if (providerHint) providerHint.textContent = 'Local mode prefers Ollama/LM Studio; set URL/model below.';
+      if (!hasModel && localAiModelInput) localAiModelInput.value = localAiModelInput.value || 'qwen2.5-coder:3b';
+      if (providerHint) providerHint.textContent = 'Local mode uses the server URL and model below instead of a cloud endpoint.';
       if (aiApiKeyInput) aiApiKeyInput.placeholder = 'API key (optional for local)';
-      aiApiUrlInput.placeholder = defaultOpenAiUrl;
-      if (!hasUrl && overwriteDefaults) aiApiUrlInput.value = '';
+      if (aiApiUrlInput) aiApiUrlInput.placeholder = 'Managed by local mode';
       return;
     }
 
@@ -547,7 +605,7 @@
     const apiUrl = aiApiUrlInput ? aiApiUrlInput.value.trim() : '';
     const apiModel = aiApiModelInput ? aiApiModelInput.value.trim() : '';
     const provider = aiProviderSelect ? aiProviderSelect.value : 'builtin';
-    const useLocal = provider === 'local' ? true : (localAiToggle ? localAiToggle.checked : false);
+    const useLocal = provider === 'local';
     const localUrl = localAiUrlInput ? localAiUrlInput.value.trim() : '';
     const localModel = localAiModelInput ? localAiModelInput.value.trim() : '';
     const effectiveKey = provider === 'builtin' ? '' : key;
@@ -587,6 +645,7 @@
       const data = await resp.json();
       const label = data.mode || (data.mockMode ? 'OFFLINE' : data.isLocalEndpoint ? 'LOCAL' : 'LIVE');
       setAiBadge(label, !data.mockMode, data.apiUrl || '');
+      updateAiModeSummary(provider);
       if (showStatus) {
         const detail = data.apiUrl ? `(${data.apiUrl})` : '';
         setStatus(`AI settings applied — ${label} ${detail}`);
@@ -652,24 +711,13 @@
   // API key + AI endpoint (stored in localStorage for convenience)
   loadAiSettingsFromStorage();
 
-  if (saveApiKeyBtn) {
-    saveApiKeyBtn.addEventListener('click', () => {
-      applyAiSettings();
-    });
-  }
-
   if (aiProviderSelect) {
     aiProviderSelect.addEventListener('change', () => {
       applyProviderPreset(aiProviderSelect.value, true);
-      if (aiProviderSelect.value === 'local' && localAiToggle) {
-        localAiToggle.checked = true;
-        if (localAiSettings) localAiSettings.style.display = 'block';
-      }
       if (aiApiModelInput) {
         if (aiProviderSelect.value === 'gemini') aiApiModelInput.setAttribute('list', 'geminiModelList');
         else aiApiModelInput.removeAttribute('list');
       }
-      applyAiSettings();
       // Notify AI module so Gemini tools bar updates
       document.dispatchEvent(new CustomEvent('nm-provider-changed', { detail: aiProviderSelect.value }));
       if (window.NightmareAI && window.NightmareAI.updateGeminiToolsVisibility) {
@@ -698,46 +746,42 @@
 
   // ── Local AI settings ──────────────────────────────────────
   function loadLocalAiSettings() {
-    const enabled = localStorage.getItem('nm-local-ai') === 'true';
     const url = localStorage.getItem('nm-local-ai-url') || 'http://localhost:11434/v1/chat/completions';
     const model = localStorage.getItem('nm-local-ai-model') || 'qwen2.5-coder:3b';
 
-    if (localAiToggle) localAiToggle.checked = enabled;
     if (localAiUrlInput) localAiUrlInput.value = url;
     if (localAiModelInput) localAiModelInput.value = model;
-    if (localAiSettings) localAiSettings.style.display = enabled ? 'block' : 'none';
-    if (aiProviderSelect && enabled) aiProviderSelect.value = 'local';
     applyProviderPreset(aiProviderSelect ? aiProviderSelect.value : 'builtin', false);
-  }
-
-  if (localAiToggle) {
-    localAiToggle.addEventListener('change', () => {
-      const enabled = localAiToggle.checked;
-      localStorage.setItem('nm-local-ai', enabled ? 'true' : 'false');
-      if (localAiSettings) localAiSettings.style.display = enabled ? 'block' : 'none';
-      if (aiProviderSelect && enabled) aiProviderSelect.value = 'local';
-      if (aiProviderSelect && !enabled && aiProviderSelect.value === 'local') aiProviderSelect.value = 'builtin';
-      applyProviderPreset(aiProviderSelect ? aiProviderSelect.value : 'builtin', true);
-      if (aiApiModelInput) {
-        if (aiProviderSelect && aiProviderSelect.value === 'gemini') aiApiModelInput.setAttribute('list', 'geminiModelList');
-        else aiApiModelInput.removeAttribute('list');
-      }
-      applyAiSettings(false);
-    });
-  }
-
-  if (saveLocalAiBtn) {
-    saveLocalAiBtn.addEventListener('click', () => {
-      const url = localAiUrlInput ? localAiUrlInput.value.trim() : '';
-      const model = localAiModelInput ? localAiModelInput.value.trim() : '';
-      if (url) localStorage.setItem('nm-local-ai-url', url);
-      if (model) localStorage.setItem('nm-local-ai-model', model);
-      applyAiSettings();
-    });
   }
 
   loadLocalAiSettings();
   applyAiSettings(false);
+
+  function resetAiSettings() {
+    [
+      'nm-api-key',
+      'nm-api-url',
+      'nm-api-model',
+      'nm-ai-provider',
+      'nm-local-ai',
+      'nm-local-ai-url',
+      'nm-local-ai-model',
+    ].forEach((key) => localStorage.removeItem(key));
+
+    if (aiProviderSelect) aiProviderSelect.value = 'builtin';
+    if (aiApiKeyInput) aiApiKeyInput.value = '';
+    if (aiApiUrlInput) aiApiUrlInput.value = '';
+    if (aiApiModelInput) aiApiModelInput.value = defaultBuiltinModel;
+    if (localAiUrlInput) localAiUrlInput.value = 'http://localhost:11434/v1/chat/completions';
+    if (localAiModelInput) localAiModelInput.value = 'qwen2.5-coder:3b';
+
+    applyProviderPreset('builtin', true);
+    applyAiSettings();
+  }
+
+  if (resetAiSettingsBtn) {
+    resetAiSettingsBtn.addEventListener('click', resetAiSettings);
+  }
 
   // ── VS Code add-on modules tracker ────────────────────────
   const defaultAddonModules = [
@@ -1183,7 +1227,7 @@
       try {
         const msg = JSON.parse(e.data);
         if (msg.type === 'connected') {
-          setStatus('Nightmare Code Console — Connected 🩸');
+          setStatus('Nightmare Code Console 2.0 — Connected 🩸');
         }
       } catch {}
     });
@@ -1225,7 +1269,7 @@
 
   // ── Init ───────────────────────────────────────────────────
   window.addEventListener('editor-ready', () => {
-    setStatus('Nightmare Code Console — Ready 🩸');
+    setStatus('Nightmare Code Console 2.0 — Ready 🩸');
     initTerminal();
     initWebSocket();
     loadFileTree();

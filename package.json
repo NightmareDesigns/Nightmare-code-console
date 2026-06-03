@@ -1,6 +1,6 @@
 {
   "name": "nightmare-code-console",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "AI-powered code editor with Matrix background and Nightmare theme",
   "main": "server.js",
   "bin": "server.js",
